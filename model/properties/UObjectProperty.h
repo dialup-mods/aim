@@ -14,7 +14,7 @@ class UObjectPropertyEntry : public PropertyEntry, LayoutTraits<UObjectProperty,
 public:
     using PropertyEntry::PropertyEntry;
 
-    void resolveInto(ResolvedValue& out, void* valuePtr) const override {
+    void resolveInto(MyResolvedValue& out, void* valuePtr) const override {
         ObjectRefResolver::resolve(out, valuePtr, *reinterpret_cast<UObject**>(valuePtr));
     }
 

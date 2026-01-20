@@ -14,7 +14,7 @@ class UDelegatePropertyEntry final : public PropertyEntry, LayoutTraits<UDelegat
 public:
     using PropertyEntry::PropertyEntry;
 
-    void resolveInto(ResolvedValue& out, void* valuePtr) const override {
+    void resolveInto(MyResolvedValue& out, void* valuePtr) const override {
         DelegateResolver::resolve(out, valuePtr);
     }
 

@@ -2,15 +2,15 @@
 #include "ValueResolver.h"
 
 struct FNameResolver {
-    static void resolve(ResolvedValue& out, void* valuePtr) {
+    static void resolve(MyResolvedValue& out, void* valuePtr) {
         FName* fName = *reinterpret_cast<FName**>(valuePtr);
 
         if (!fName) {
-            out.kind = ResolvedValue::Kind::Null;
+            out.mKind = MyResolvedValue::Kind::Null;
             return;
         }
-        out.kind = ResolvedValue::Kind::String;
-        out.storage = ResolvedValue::StorageType::InlineStruct;
+        out.mKind = MyResolvedValue::Kind::String;
+        out.mStorage = MyResolvedValue::StorageType::InlineStruct;
 
         // fixme make public, regenerate sdk
         //out.name->entryId = fName->FNameEntryId;
@@ -20,7 +20,7 @@ struct FNameResolver {
         //if (canResolveNames()) {
         out.primitiveStr = fName->ToString();
         if (!fName->IsValid()) {
-            out.invalid = true;
+            out.mInvalid = true;
         }
         //}
     }

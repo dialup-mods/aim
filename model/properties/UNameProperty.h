@@ -14,7 +14,7 @@ class UNamePropertyEntry final : public PropertyEntry, LayoutTraits<UNamePropert
 public:
     using PropertyEntry::PropertyEntry;
 
-    void resolveInto(ResolvedValue& out, void* valuePtr) const override {
+    void resolveInto(MyResolvedValue& out, void* valuePtr) const override {
         FNameResolver::resolve(out, valuePtr);
     }
 

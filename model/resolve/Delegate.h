@@ -3,20 +3,20 @@
 #include "SDK.h"
 
 struct DelegateResolver {
-    static void resolve(ResolvedValue& out, const void* valuePtr) {
+    static void resolve(MyResolvedValue& out, const void* valuePtr) {
         const FScriptDelegate* del =
             reinterpret_cast<const FScriptDelegate*>(valuePtr);
 
         if (!del || !del->Object) {
-            out.kind = ResolvedValue::Kind::Null;
+            out.mKind = MyResolvedValue::Kind::Null;
             return;
         }
 
-        out.kind = ResolvedValue::Kind::Delegate;
-        out.delegate->object = del->Object;
+        out.mKind = MyResolvedValue::Kind::Delegate;
+        out.mDelegate->object = del->Object;
 
         std::memcpy(
-            out.delegate->unknownData.data(),
+            out.mDelegate->unknownData.data(),
             del->UnknownData,
             0x10
         );

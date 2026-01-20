@@ -2,14 +2,14 @@
 #include "ValueResolver.h"
 
 struct ObjectRefResolver {
-    static void resolve(ResolvedValue& out, void* valuePtr, UObject* obj) {
+    static void resolve(MyResolvedValue& out, void* valuePtr, UObject* obj) {
         if (!obj) {
-            out.kind = ResolvedValue::Kind::Null;
+            out.mKind = MyResolvedValue::Kind::Null;
             return;
         }
 
-        out.storage = ResolvedValue::StorageType::UInt32;
-        out.kind = ResolvedValue::Kind::ObjectRef;
+        out.mStorage = MyResolvedValue::StorageType::UInt32;
+        out.mKind = MyResolvedValue::Kind::ObjectRef;
 
         out.object = obj;
     }

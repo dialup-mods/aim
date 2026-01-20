@@ -14,7 +14,7 @@ class UBoolPropertyEntry : public PropertyEntry, LayoutTraits<UBoolProperty, UPr
 public:
     using PropertyEntry::PropertyEntry;
 
-    void resolveInto(ResolvedValue& out, void* valuePtr) const override {
+    void resolveInto(MyResolvedValue& out, void* valuePtr) const override {
         BooleanResolver::resolve(out, valuePtr, getBitMask());
     }
 

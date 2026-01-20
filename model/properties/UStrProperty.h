@@ -14,7 +14,7 @@ class UStrPropertyEntry final : public PropertyEntry, LayoutTraits<UStrProperty,
 public:
     using PropertyEntry::PropertyEntry;
 
-    void resolveInto(ResolvedValue& out, void* valuePtr) const override {
+    void resolveInto(MyResolvedValue& out, void* valuePtr) const override {
         IntegerResolver::resolve(out, valuePtr);
     }
 

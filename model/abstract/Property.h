@@ -59,7 +59,7 @@ public:
 
 protected:
     template<typename Resolver>
-    void resolveVia(ResolvedValue& out, void* valuePtr) const {
+    void resolveVia(MyResolvedValue& out, void* valuePtr) const {
         static_cast<const Resolver*>(this)->Resolver::resolveInto(out, valuePtr);
     }
 
@@ -69,18 +69,18 @@ public:
         return static_cast<uint8_t*>(params) + getOffset();
     }
 
-    virtual auto getResolvedKind() const -> ResolvedValue::Kind = 0;
-    virtual auto getStorageType() const -> ResolvedValue::StorageType = 0;
+    virtual auto getResolvedKind() const -> MyResolvedValue::Kind = 0;
+    virtual auto getStorageType() const -> MyResolvedValue::StorageType = 0;
     // fixme need to implement on others
     //virtual void resolveInto(ResolvedValue& out, void* valuePtr) const = 0;
-    virtual void resolveInto(ResolvedValue& out, void* valuePtr) const {}
+    virtual void resolveInto(MyResolvedValue& out, void* valuePtr) const {}
 
-    auto resolveValue(void* params) const -> ResolvedValue {
-        ResolvedValue v;
-        v.kind = getResolvedKind();
+    auto resolveValue(void* params) const -> MyResolvedValue {
+        MyResolvedValue v;
+        v.mKind = getResolvedKind();
         // fixme move these to class and outside of the resolvers for reuse with SDK
         v.data = getValuePtr(params);
-        v.storage = getStorageType();
+        v.mStorage = getStorageType();
 
         resolveInto(v, v.data);
         return v;

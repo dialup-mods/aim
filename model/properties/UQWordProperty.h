@@ -20,7 +20,7 @@ class UQWordPropertyEntry final : public PropertyEntry, LayoutTraits<UInterfaceP
 public:
     using PropertyEntry::PropertyEntry;
 
-    void resolveInto(ResolvedValue& out, void* valuePtr) const override {
+    void resolveInto(MyResolvedValue& out, void* valuePtr) const override {
         IntegerResolver::resolve(out, valuePtr);
     }
 

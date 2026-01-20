@@ -14,7 +14,7 @@ class UBytePropertyEntry final : public PropertyEntry, LayoutTraits<UBytePropert
 public:
     using PropertyEntry::PropertyEntry;
 
-    void resolveInto(ResolvedValue& out, void* valuePtr) const override {
+    void resolveInto(MyResolvedValue& out, void* valuePtr) const override {
         ByteResolver::resolve(out, valuePtr, asByteProperty()->Enum);
     }
 

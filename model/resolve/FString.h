@@ -47,18 +47,18 @@ struct FStringResolver {
         return result;
     }
 
-    static void resolve(ResolvedValue& out, void* valuePtr) {
+    static void resolve(MyResolvedValue& out, void* valuePtr) {
         FString* str = *reinterpret_cast<FString**>(valuePtr);
 
         if (!str) {
-            out.kind = ResolvedValue::Kind::Null;
+            out.mKind = MyResolvedValue::Kind::Null;
             return;
         }
 
-        out.storage = ResolvedValue::StorageType::InlineStruct;
-        out.kind = ResolvedValue::Kind::String;
+        out.mStorage = MyResolvedValue::StorageType::InlineStruct;
+        out.mKind = MyResolvedValue::Kind::String;
         if (!str || !str->ArrayData || str->ArrayCount <= 0) {
-            out.kind = ResolvedValue::Kind::String;
+            out.mKind = MyResolvedValue::Kind::String;
             out.primitiveStr = "";
             return;
         }
