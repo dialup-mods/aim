@@ -20,6 +20,7 @@ include_directories(
     ${CMAKE_SOURCE_DIR}/fixtures
     ${CMAKE_SOURCE_DIR}/../engine
     ${DIALUP_INSTALL_DIR}/include/v1
+    ${DIALUP_INSTALL_DIR}/include/ue_model/v1
     ${DIALUP_INSTALL_DIR}/sdk-plugin/include
     ${DIALUP_INSTALL_DIR}/include/external/fmt/include
 )

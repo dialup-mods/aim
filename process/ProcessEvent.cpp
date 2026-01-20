@@ -20,6 +20,8 @@
 #include "MutexGuard.h"
 #include "PluginFence.h"
 
+#include "UEModelTypes.h"
+#include "ValueResolver.h"
 namespace p = patchutils;
 
 ProcessEvent* ProcessEvent::instance_ = nullptr;
@@ -129,8 +131,6 @@ void ProcessEvent::clearTasks() {
 void* ProcessEvent::getRLFn() {
     if (processEventVTableFn_ != nullptr) { return processEventVTableFn_; }
 
-    log_->debug("[PE] getRlFn()");
-
     auto fn = reinterpret_cast<void**>(UObject::StaticClass()->VfTableObject.Ptr)[getVTableIndex()];
     if (fn == nullptr || !safe::memory::isAddressAccessible(fn, sizeof(void*))) {
         log_->error("[PE] inaccessible memory");
@@ -220,6 +220,7 @@ bool ProcessEvent::fastIsAcquired() {
     return false;
 }
 
+
 void __fastcall ProcessEvent::handleFunction(UObject* self, UFunction* fn, void* params, void* result) {
     if (!fastIsAcquired()) {
         reinterpret_cast<tProcessEvent>(bakkesTrampolineFn_)(self, fn, params, result);
@@ -238,6 +239,31 @@ void __fastcall ProcessEvent::handleFunction(UObject* self, UFunction* fn, void*
         //    dispatch->deferTask(fn->ObjectInternalInteger, context);
         //    return;
         //}
+        if (fn && fn->GetFullName().find("GetMapName") != std::string::npos) {
+            struct P {
+                uint32_t bIncludePrefix;
+                FString ReturnValue = {};
+            };
+
+
+            printf("[PE HOOK] GetMapName hit on %s\n",
+                self->GetFullName().c_str());
+            printf("[PE HOOK] GetMapName fn: %s\n", fn->GetFullName().c_str());
+
+            auto model = UEModel::assignClassFromRawPtr(fn);
+            auto fnObj = static_cast<UFunctionEntry*>(model.get());
+            printf("[PE HOOK] Fn Type: %s\n", model->getFullName().c_str());
+            fnObj->iterateDependencies();
+            //for (auto param : fnObj->getAllParams()) {
+            //    uint8_t* base = static_cast<uint8_t*>(params);
+            //    void* valuePtr = base + param->getOffset();
+            //    ResolvedValue out;
+            //    param->resolveInto(out, valuePtr);
+            //    if (!out.primitiveStr.empty()) {
+            //        printf(" resolved: %s\n", out.primitiveStr.c_str());
+            //    }
+            //}
+        }
 
         // run prehooks
         auto context = InvocationContext::makeProcessEventContext(self, fn, params);
@@ -255,7 +281,7 @@ void __fastcall ProcessEvent::handleFunction(UObject* self, UFunction* fn, void*
         // conditional hooks
         dispatch->dispatchGated(fn->ObjectInternalInteger, context);
     } else {
+        // dispatcher is MIA fallback
         reinterpret_cast<tProcessEvent>(bakkesTrampolineFn_)(self, fn, params, result);
     }
 }
-

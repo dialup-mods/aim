@@ -264,12 +264,12 @@ AIM::loadDetourModules() {
     auto cf = resolve<CallFunction>();
     if (!pe || !pi || !cf) return false;
 
-    //pe->init();
+    pe->init();
 
-    //pe->onDetoured([log = getLogger()] {
-    //    log->debug("ProcessEvent is detoured, loading PI...");
-    //    //pi->init();
-    //});
+    pe->onDetoured([log = getLogger()] {
+        log->debug("ProcessEvent is detoured, loading PI...");
+        //pi->init();
+    });
 
     //registerModule(
     //ModuleDefinition<TaskBuilder>()
@@ -361,6 +361,8 @@ AIM::startup() {
         return;
     }
 
+    printf("\n\n\n\n%p\n\n\n\n\n\n\n", UObject::StaticClass()->VfTableObject.Ptr);
+
     unrealReadyGate->onReady([this, fence, log] {
         log->debug("unreal ready, calling detours\n");
         loadDetourModules();
@@ -415,7 +417,7 @@ AIM::shutdown() {
     log->trace("remove");
     // clang-format off
     //removeDetour(cf, cfGate, log);
-    //removeDetour(pe, peGate, log);
+    removeDetour(pe, peGate, log);
     //gateDestroy->setReady();
     //log->debug("destroy gate setReady()");
     staticResolver_ = nullptr;

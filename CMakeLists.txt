@@ -14,6 +14,7 @@ set(SOURCES
     ${CMAKE_SOURCE_DIR}/engine/ObjectProvider.cpp
     ${CMAKE_SOURCE_DIR}/memory/PatchBuilder.cpp
     ${CMAKE_SOURCE_DIR}/memory/PatchManager.cpp
+    ${CMAKE_SOURCE_DIR}/model/UEModel.cpp
     ${CMAKE_SOURCE_DIR}/process/CallFunction.cpp
     ${CMAKE_SOURCE_DIR}/process/ProcessEvent.cpp
     ${CMAKE_SOURCE_DIR}/process/ProcessInternal.cpp
@@ -38,6 +39,12 @@ set(INCLUDES
     ${DIALUP_INSTALL_DIR}/include
     ${DIALUP_INSTALL_DIR}/include/v1
     ${DIALUP_INSTALL_DIR}/include/external
+    ${CMAKE_SOURCE_DIR}/model
+    ${CMAKE_SOURCE_DIR}/model/abstract
+    ${CMAKE_SOURCE_DIR}/model/base
+    ${CMAKE_SOURCE_DIR}/model/helpers
+    ${CMAKE_SOURCE_DIR}/model/properties
+    ${CMAKE_SOURCE_DIR}/model/resolve
     ${DIALUP_INSTALL_DIR}/sdk-plugin/include
 )
 

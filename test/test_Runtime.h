@@ -15,6 +15,23 @@
 
 #include "ObjectProvider.h"
 
+//static FString SafeFString(std::wstring_view s) {
+//    FString str{};
+//    str.ArrayCount = static_cast<int32_t>(s.size() + 1);
+//    str.ArrayMax   = str.ArrayCount;
+//    str.ArrayData  = new wchar_t[str.ArrayCount];
+//
+//    wmemcpy(str.ArrayData, s.data(), s.size());
+//    str.ArrayData[s.size()] = L'\0';
+//    return str;
+//}
+
+inline auto int_to_hex(uintptr_t value, size_t width) -> std::string {
+    std::ostringstream oss;
+    oss << "0x" << std::setfill('0') << std::setw(static_cast<int>(width)) << std::hex << std::uppercase << value;
+    return oss.str();
+}
+
 inline auto findPattern(HMODULE module, const unsigned char* pattern, const char* mask) -> uintptr_t {
     MODULEINFO info = {};
     GetModuleInformation(GetCurrentProcess(), module, &info, sizeof(MODULEINFO));
@@ -53,6 +70,18 @@ inline auto getUObjectsAddress() -> uintptr_t {
     return uObjectsAddress;
 }
 
+using ProcessEventFn = void(*)(UObject*, UFunction*, void*);
+
+inline void callProcessEvent(UObject* obj, UFunction* fn, void* params) {
+    auto cdo_vtable = reinterpret_cast<void**>(Runtime::findClass("Class Core.Object")->VfTableObject.Ptr)[67];
+    printf("cdo ptr: %p\n", cdo_vtable);
+
+    auto** vtable = *reinterpret_cast<void***>(obj);
+    auto pe = reinterpret_cast<ProcessEventFn>(vtable[67]);
+    printf("obj ptr: %p\n", pe);
+    pe(obj, fn, params);
+}
+
 class RuntimeTest {
 public:
 
@@ -79,7 +108,7 @@ public:
             //}
             if (!uObject->IsA<T>()) { continue; }
 
-            //if (uObject->ObjectFlags & RF_DefaultOrArchetypeFlags) { continue; }
+            if (uObject->ObjectFlags & RF_DefaultOrArchetypeFlags) { continue; }
 
             printf("found at index: %i/%i\n", i, Runtime::getUObjects().size());
             return static_cast<T*>(uObject);
@@ -135,7 +164,7 @@ public:
 
             //testGetInstanceOf();
             //testFindFunction();
-            //testCallMethodOnObject();
+            testDataStores();
             //testDatastoreDiscovery();
 
             //testFName();
@@ -308,24 +337,65 @@ public:
 
     }
 
-    void testCallMethodOnObject() {
+    void testDataStores() {
         printf("[TEST] Call Method on Object\n");
 
         auto* cls = Runtime::findClass("Class Core.Object");
+        //auto* fn = Runtime::findFunction("Function ProjectX.GFxDataStore_X.GetRowCount");
 
+
+
+
+        //{
+        //    auto pcs = getAllInstancesOf<APlayerController_TA>();
+        //        printf("RegisterCustomPlayerDataStores:");
+        //        printf("  LP: %p\n", params->LP);
+        //        printf("  DataStoreManager: " + stringutil::toHex(reinterpret_cast<uintptr_t>(params->DataStoreManager)));
+        //        printf("  PlayerDataStoreClass: " + safe::ue::name(params->PlayerDataStoreClass));
+        //        printf("  PlayerName: " + stringutil::toString(params->PlayerName));
+        //}
+
+
+        auto* fn = Runtime::findFunction("Function TAGame.GFxData_Chat_TA.ClearDistracted");
         {
-            printf("  searching: GFxDataStore_X\n");
-            auto datastores = getAllInstancesOf<UGFxDataStore_X>();
-            for (auto* ds : datastores) {
-                printf("  found obj: %s\n", ds->GetFullName().c_str());
+            auto chats = getAllInstancesOf<UGFxData_Chat_TA>();
+            for (auto* chat : chats) {
+                printf("  found obj: %s\n", chat->GetFullName().c_str());
+                if (!chat->Shell) {
+                    printf("no shell\n");
+                    continue;
+                }
+                if (!chat->Shell->DataStore) {
+                    printf("no datastore\n");
+                    continue;
+                }
+
+                printf("  should be transient / live: %s\n", chat->GetFullName().c_str());
+                chat->ClearDistracted();
+                callProcessEvent(chat, fn, nullptr);
+
+                auto ds = chat->Shell->DataStore;
+                //chat->Shell->DataStore->PrintData(L"ChatPresetMessages");
+                printf("chat name: %s\n", chat->GetFullName().c_str());
+                printf("ds name: %s\n", ds->GetFullName().c_str());
+
                 auto tables = ds->Tables;
-                printf("after tables\n");
                 for (auto table : tables) {
-                    printf("  table name: %s", table.Name.ToString().c_str());
-                    //if (!table.Name.ToString().empty()) {
-                    //    auto res = ds->GetRowCount(table.Name);
-                    //    printf("  res: %i\n", res);
-                    //}
+                    if (!table.Name.ToString().empty() && table.Name.ToString() != "None") {
+                        struct {
+                            FName Table;
+                            int32_t ReturnValue;
+                        } params;
+
+                //        printf("fn at: %p\n", fn);
+                        printf("  table name: %s\n", table.Name.ToString().c_str());
+                        auto countMaybe = ds->GetRowCount(table.Name);
+                        printf("  ->ret: %i\n", countMaybe);
+                //        params.Table = table.Name;
+                //        //auto res = ds->GetRowCount(table.Name);
+                //        callProcessEvent(ds, fn, &params, nullptr);
+                //        printf("  res: %i\n", params.ReturnValue);
+                    }
                 }
             }
 
@@ -441,9 +511,11 @@ public:
                     printf("fail\n");
                 }
 
-                printf("  world time seconds: %f\n", obj->TimeSeconds);
-                printf("  world engine version: %s\n", obj->EngineVersion.ToString().c_str());
-                printf("  world computer name: %s\n", obj->ComputerName.ToString().c_str());
+                if (!obj->EngineVersion.ToString().empty()) {
+                    printf("  world time seconds: %f\n", obj->TimeSeconds);
+                    printf("  world engine version: %s\n", obj->EngineVersion.ToString().c_str());
+                    printf("  world computer name: %s\n", obj->ComputerName.ToString().c_str());
+                }
             }
         }
 
@@ -455,45 +527,96 @@ public:
         //printf("  from engine static world computer name: %s\n", res->ComputerName.ToString().c_str());
     }
 
+
     void testProcessEventDirect() {
         printf("[TEST] Direct ProcessEvent call (bypass SDK wrapper)\n");
 
-        auto* obj = Runtime::findClass("Class Core.Object");
-        if (!obj) {
-            printf("FAIL: No object\n");
-            return;
-        }
+        //auto* coreObjStatic = Runtime::findClass("Class Core.Object");
+        //if (!coreObjStatic) {
+        //    printf("FAIL: No object\n");
+        //    return;
+        //}
+
+        //{
+        //    UFunction* func = Runtime::findFunction("Function Engine.WorldInfo.GetWorldInfo");
+        //    if (!func) {
+        //        printf("FAIL: Function not found\n");
+        //        return;
+        //    }
+
+        //    // Call ProcessEvent directly via vtable
+        //    printf("Calling PE directly on obj=%p, func=%p\n", coreObjStatic, func);
+        //    fflush(stdout);
+
+        //    auto vtable = *reinterpret_cast<void***>(coreObjStatic);
+        //    auto peFunc = reinterpret_cast<void(*)(UObject*, UFunction*, void*)>(vtable[67]);
+
+        //    printf("PE function pointer: %p\n", peFunc);
+        //    fflush(stdout);
+
+        //    struct { void* ReturnValue; } params{};
+        //    peFunc(coreObjStatic, func, &params);
+
+        //    printf("PE returned! Result: %p\n", params.ReturnValue);
+
+        //}
+
+        //{
+        //    auto datastores = getAllInstancesOf<UGFxDataStore_X>();
+        //    for (auto* ds : datastores) {
+        //        printf("  found obj: %s\n", ds->GetFullName().c_str());
+        //        auto tables = ds->Tables;
+        //        printf("after tables\n");
+        //        for (auto table : tables) {
+        //            if (!table.Name.ToString().empty() && table.Name.ToString() != "None") {
+        //                printf("  table name: %s\n", table.Name.ToString().c_str());
+		//                auto* fn = UFunction::FindFunction("Function ProjectX.GFxDataStore_X.GetRowCount");
+        //                auto vtable = *reinterpret_cast<void***>(table);
+        //                auto peFunc = reinterpret_cast<void(*)(UObject*, UFunction*, void*, void*)>(vtable[67]);
+        //                struct {
+        //                    FName Table;
+        //                    int32_t ReturnValue;
+        //                } params;
+        //                params.Table = table.Name;
+        //                peFunc(, getTimeFunc, &params, nullptr);
+
+        //                if (params.ReturnValue != nullptr) {
+        //                    printf("ret: %p\n", params.ReturnValue);
+        //                }
+
+        //                auto res = ds->GetRowCount(table.Name);
+        //                printf("  res: %i\n", res);
+        //            }
+        //        }
+        //    }
+
+        //}
+
+        //{
+        //    auto* obj = getInstanceOf<UObject>();
+        //    auto* func = Runtime::findFunction("Function Core.Object.GetEngineVersion");
+        //    printf("Calling PE directly on obj=%p, func=%p\n", obj, func);
+        //    fflush(stdout);
+
+        //    auto vtable = *reinterpret_cast<void***>(obj);
+        //    auto peFunc = reinterpret_cast<void(*)(UObject*, UFunction*, void*, void*)>(vtable[67]);
+        //    struct {
+        //        uint8_t* ReturnValue;
+        //    } params;
+        //    peFunc(obj, func, &params, nullptr);
+
+        //    printf("    ret: %p\n", params.ReturnValue);
+        //}
 
         {
-            UFunction* func = Runtime::findFunction("Function Engine.WorldInfo.GetWorldInfo");
-            if (!func) {
-                printf("FAIL: Function not found\n");
-                return;
-            }
+            auto* idFn = Runtime::findFunction("Function Core.Object.GetUniqueID");
 
-            // Call ProcessEvent directly via vtable
-            printf("Calling PE directly on obj=%p, func=%p\n", obj, func);
-            fflush(stdout);
-
-            auto vtable = *reinterpret_cast<void***>(obj);
-            auto peFunc = reinterpret_cast<void(*)(UObject*, UFunction*, void*)>(vtable[67]);
-
-            printf("PE function pointer: %p\n", peFunc);
-            fflush(stdout);
-
-            struct { void* ReturnValue; } params{};
-            peFunc(obj, func, &params);
-
-            printf("PE returned! Result: %p\n", params.ReturnValue);
-
-        }
-
-        {
             auto worlds = getAllInstancesOf<AWorldInfo>();
 
             struct paramStruct {
                 uint8_t* ReturnValue;
             };
+
 
             for (auto* world : worlds) {
                 printf("  finding AWorldInfo: ");
@@ -503,19 +626,40 @@ public:
                     printf("fail\n");
                 }
 
-                printf("  world time seconds: %f\n", world->TimeSeconds);
-                printf("  world engine version: %s\n", world->EngineVersion.ToString().c_str());
-                printf("  world computer name: %s\n", world->ComputerName.ToString().c_str());
-                UFunction* getTimeFunc = Runtime::findFunction("Function Engine.WorldInfo.GetConsoleType");
+                if (!world->EngineVersion.ToString().empty()) {
+                    printf("  world time seconds: %f\n", world->TimeSeconds);
+                    printf("  world engine version: %s\n", world->EngineVersion.ToString().c_str());
+                    printf("  world computer name: %s\n", world->ComputerName.ToString().c_str());
+                    UFunction* getTimeFunc = Runtime::findFunction("Function Engine.WorldInfo.GetConsoleType");
+                    UFunction* getWorldInfo = Runtime::findFunction("Function Engine.Engine.GetCurrentWorldInfo");
 
-                auto vtable = *reinterpret_cast<void***>(world);
-                auto peFunc = reinterpret_cast<void(*)(UObject*, UFunction*, void*, void*)>(vtable[67]);
-                auto params = paramStruct{};
-                peFunc(world, getTimeFunc, &params, nullptr);
 
-                if (params.ReturnValue != nullptr) {
-                    printf("ret: %p\n", params.ReturnValue);
+                    struct {
+                        AWorldInfo* ReturnValue;
+                    } worldInfoParams;
+
+                    struct {
+                        uint32_t bIncludePrefix;
+                        FString ReturnValue = {};
+                    } params;
+
+                    params.bIncludePrefix = 1;
+
+                    callProcessEvent(world, Runtime::findFunction("Function Engine.WorldInfo.GetMapName"), &params);
+                    printf("  ret ptr: %p\n", &params.ReturnValue);
+                    printf("  map name: %s\n", params.ReturnValue.ToString().c_str());
+                    printf("  map name: %ls\n", params.ReturnValue.ArrayData);
+
+                    callProcessEvent(world, getWorldInfo, &worldInfoParams);
+                    if (worldInfoParams.ReturnValue != nullptr) {
+                        printf("  ret: %p\n", worldInfoParams.ReturnValue);
+                        auto* retWorldInfoObj = worldInfoParams.ReturnValue;
+                        printf("  console type: %i\n", retWorldInfoObj->GetConsoleType());
+                    }
+
+
                 }
+
             }
         }
     }
@@ -528,53 +672,12 @@ public:
 
 
     void testNotification() {
-        //    object: GFxData_TextModerationManager_TA Transient.GFxData_TextModerationManager_TA
-        //166914
-        //object: GFxData_ThankYouMessageManager_TA Transient.GFxData_ThankYouMessageManager_TA
-        printf("[TEST] Notification\n");
         auto* mgr = getInstanceOf<UNotificationManager_TA>();
-        auto* mgr2 = getInstanceOf<UGFxData_NotificationManager_TA>();
-
-        auto* genericNotification = getInstanceOf<UNotificationManager_TA>();
-
-        if (mgr) {
-            printf("got manager: %s\n", mgr->GetFullName().c_str());
-
-            auto* generic = UGenericNotification_TA::StaticClass();
-            printf("name: %s\n", generic->GetFullName().c_str());
-            generic->StaticClass();
-            //auto* toaster = mgr->PopUpOnlyNotification(UGenericNotification_TA::StaticClass());
-            auto* toaster = mgr->PopUpOnlyNotification(generic);
-            if (toaster) {
-                printf("[TOAST] mgr: %p\n", mgr);
-                printf("[TOAST] toaster: %p\n", toaster);
-                printf("[TOAST] toaster full name: %s\n", toaster->GetFullName().c_str());
-                printf("[TOAST] UGenericNotification_TA::StaticClass(): %p\n", UGenericNotification_TA::StaticClass());
-                printf("[TOAST] typeid(*toaster): %s\n", toaster ? typeid(*toaster).name() : "<null>");
-                printf("[TOAST] vtable: %p\n", toaster ? *(void**)toaster : 0);
-                bool bExpired = toaster->IsExpired();
-                printf("expired? %d\n", bExpired);
-                //auto title = FString::SafeFString(t);
-                //auto message = title;
-                //toaster->SetTitle(title);
-                //toaster->SetBody(message);
-                //    // try something trivial like
-                //    toaster->PopUpDuration = 10.0f;
-                //} else {
-                //    printf("toaster null\n");
-                //}
-            } else {
-                printf("no toast :(\n");
-            }
-        } else {
-            printf("fail no manager\n");
-        }
-
+        auto* toaster = mgr->PopUpOnlyNotification(UGenericNotification_TA::StaticClass());
+        //toaster->SetTitle();
+        //toaster->SetBody(L"bar");
+        toaster->PopUpDuration = static_cast<float>(5);
     }
-
-
-
-
 };
 
 inline auto enwiden(const std::string& input) -> std::wstring {

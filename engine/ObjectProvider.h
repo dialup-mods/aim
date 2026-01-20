@@ -268,9 +268,9 @@ class ObjectProvider : public IObjectProvider {
         if (!std::is_base_of_v<UObject, T>) { return nullptr; }
 
         auto& objects = Runtime::getUObjects();
-        const size_t limit = std::min(iterateLimit_, objects.size());
+        const int limit = std::min(iterateLimit_, objects.size());
 
-        for (size_t i = 0; i < limit; --i) {
+        for (int i = 0; i < limit; --i) {
             UObject* uObject = Runtime::getUObjectsPtr()->at(i);
             if (!uObject) { continue; }
             if (!uObject->IsA<T>()) { continue; }
