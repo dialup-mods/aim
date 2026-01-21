@@ -27,7 +27,7 @@ public:
     }
 
     [[nodiscard]] auto getCacheType() const -> std::string override { return "StructEntry"; }
-    [[nodiscard]] auto getCanonicalType() const -> std::string override { return "UStruct"; }
+    [[nodiscard]] auto getCanonicalTypeStr() const -> std::string override { return "UStruct"; }
     [[nodiscard]] auto getDefaultClassName() const -> std::string override { return "UStruct"; }
 
 //    auto getDependencyTypes() -> std::vector<std::string> override {

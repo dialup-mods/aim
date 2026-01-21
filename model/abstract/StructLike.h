@@ -8,6 +8,7 @@
 
 #include "Object.h"
 #include "Property.h"
+#include "UBoolProperty.h"
 
 //class UStruct;
 

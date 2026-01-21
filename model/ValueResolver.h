@@ -6,7 +6,7 @@ class StructLikeEntry;
 class UObject;
 class UEnum;
 
-struct MyResolvedValue {
+struct ResolvedValue {
     struct ResolvedInterface {
         UObject* object{nullptr};
         std::string objectName;
@@ -77,25 +77,26 @@ struct MyResolvedValue {
     //     Not stable, not portable, not replay-safe
     // “This UObject implements interface X, and here’s the fast-call pointer”
 
-    Kind mKind = Kind::Unknown;
-    StorageType mStorage = StorageType::Unknown;
+    Kind kind = Kind::Unknown;
+    StorageType storage = StorageType::Unknown;
 
     void* data = nullptr;
     const StructLikeEntry* schema{nullptr};
 
     // Optional enrichments
     UObject* object;
-    ResolvedDelegate* mDelegate;
-    ResolvedInterface* mInterface;
-    ResolvedInlineStruct* mName;
+    ResolvedDelegate* delegate;
+    ResolvedInterface* interface;
+    ResolvedInlineStruct* name;
     UEnum* uEnum;
-    bool mInvalid;
+    bool invalid;
     std::string objectName;
     std::string objectClass;
     std::string primitiveStr;
+    std::wstring primitiveWStr;
     std::string className;
     std::string fullName;
     std::string superName;
 
-    bool isNull() const { return mKind == Kind::Null; }
+    bool isNull() const { return kind == Kind::Null; }
 };

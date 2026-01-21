@@ -94,11 +94,6 @@ public:
     auto getOutParams() const -> std::vector<PropertyEntry*> { return outParams_; }
     auto getAllParams() const -> std::vector<PropertyEntry*> {
         // fixme sort by offset, if not already
-        // std::sort(parms.begin(), parms.end(),
-        // [](FProperty* a, FProperty* b)
-        // {
-        //     return a->Offset_Internal < b->Offset_Internal;
-        // });
         std::vector<PropertyEntry*> params;
 
         auto args = getArguments();
@@ -107,13 +102,8 @@ public:
         params.insert(params.end(), args.begin(), args.end());
         params.insert(params.end(), outs.begin(), outs.end());
 
-        if (auto retParam = getReturnParam()) {
-            params.emplace_back(*retParam);
-        }
-
         return params;
     }
-
 
     auto getParamKey() const -> std::string override {
         auto key = fmt::format("{}_{}_Params", getClassNameCPP(), getFunctionName());

@@ -8,13 +8,13 @@
 
 #include "LayoutTraits.h"
 #include "Property.h"
-#include "resolve/Boolean.h"
+#include "resolve/BooleanResolver.h"
 
 class UBoolPropertyEntry : public PropertyEntry, LayoutTraits<UBoolProperty, UProperty> {
 public:
     using PropertyEntry::PropertyEntry;
 
-    void resolveInto(MyResolvedValue& out, void* valuePtr) const override {
+    void resolveInto(ResolvedValue& out, void* valuePtr) const override {
         BooleanResolver::resolve(out, valuePtr, getBitMask());
     }
 

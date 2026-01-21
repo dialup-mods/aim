@@ -8,13 +8,13 @@
 
 #include "LayoutTraits.h"
 #include "Property.h"
-#include "resolve/FString.h"
+#include "resolve/FStringResolver.h"
 
 class UStrPropertyEntry final : public PropertyEntry, LayoutTraits<UStrProperty, UProperty> {
 public:
     using PropertyEntry::PropertyEntry;
 
-    void resolveInto(MyResolvedValue& out, void* valuePtr) const override {
+    void resolveInto(ResolvedValue& out, void* valuePtr) const override {
         IntegerResolver::resolve(out, valuePtr);
     }
 

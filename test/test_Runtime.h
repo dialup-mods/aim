@@ -360,17 +360,17 @@ public:
         {
             auto chats = getAllInstancesOf<UGFxData_Chat_TA>();
             for (auto* chat : chats) {
-                printf("  found obj: %s\n", chat->GetFullName().c_str());
+                //printf("  found obj: %s\n", chat->GetFullName().c_str());
                 if (!chat->Shell) {
-                    printf("no shell\n");
+                    //printf("no shell\n");
                     continue;
                 }
                 if (!chat->Shell->DataStore) {
-                    printf("no datastore\n");
+                    //printf("no datastore\n");
                     continue;
                 }
 
-                printf("  should be transient / live: %s\n", chat->GetFullName().c_str());
+                //printf("  should be transient / live: %s\n", chat->GetFullName().c_str());
                 chat->ClearDistracted();
                 callProcessEvent(chat, fn, nullptr);
 
@@ -381,16 +381,16 @@ public:
 
                 auto tables = ds->Tables;
                 for (auto table : tables) {
-                    if (!table.Name.ToString().empty() && table.Name.ToString() != "None") {
+                    if (table.Name.FNameEntryId && Runtime::getFNameEntryName(table.Name.FNameEntryId) != "None") {
                         struct {
                             FName Table;
                             int32_t ReturnValue;
                         } params;
 
                 //        printf("fn at: %p\n", fn);
-                        printf("  table name: %s\n", table.Name.ToString().c_str());
+                        printf("  table name: %s\n", Runtime::getFNameEntryName(table.Name.FNameEntryId).c_str());
                         auto countMaybe = ds->GetRowCount(table.Name);
-                        printf("  ->ret: %i\n", countMaybe);
+                //        printf("  ->ret: %i\n", countMaybe);
                 //        params.Table = table.Name;
                 //        //auto res = ds->GetRowCount(table.Name);
                 //        callProcessEvent(ds, fn, &params, nullptr);

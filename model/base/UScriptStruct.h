@@ -25,7 +25,7 @@ public:
     }
 
     [[nodiscard]] auto getCacheType() const -> std::string override { return "ScriptStructEntry"; }
-    [[nodiscard]] auto getCanonicalType() const -> std::string override { return "UScriptStruct"; }
+    [[nodiscard]] auto getCanonicalTypeStr() const -> std::string override { return "UScriptStruct"; }
     [[nodiscard]] auto getDefaultClassName() const -> std::string override { return "UScriptStruct"; }
 
     void iterateDependencies() override {
@@ -232,7 +232,7 @@ public:
             auto flagStr = FlagStrings::getInterestingPropertyFlagsString(propertyEntry->getPropertyFlags());
             std::string comment = flagStr.empty() ? "" : " // " + flagStr;
             fprintf(file, "    %s %s;%s\n",
-                propertyEntry->getCanonicalType().c_str(),
+                propertyEntry->getCanonicalTypeStr().c_str(),
                 name.c_str(),
                 comment.c_str()
             );

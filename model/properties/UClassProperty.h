@@ -8,13 +8,13 @@
 
 #include "LayoutTraits.h"
 #include "Property.h"
-#include "resolve/Class.h"
+#include "resolve/ClassResolver.h"
 
 class UClassPropertyEntry final : public PropertyEntry, LayoutTraits<UClassProperty, UProperty> {
 public:
     using PropertyEntry::PropertyEntry;
 
-    void resolveInto(MyResolvedValue& out, void* valuePtr) const override {
+    void resolveInto(ResolvedValue& out, void* valuePtr) const override {
         ClassResolver::resolve(out, valuePtr);
     }
 

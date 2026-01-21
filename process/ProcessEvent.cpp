@@ -1,3 +1,5 @@
+#include "Exception.h"
+#include "Printer.h"
 #include "SDK.h"
 #include "ProcessEvent.h"
 #include "AIM.h"
@@ -220,10 +222,35 @@ bool ProcessEvent::fastIsAcquired() {
     return false;
 }
 
+void ProcessEvent::printStr(const std::string& prefix, const std::string& str) {
+    __try {
+        printf("  -> %s: %s\n", prefix.c_str(), str.c_str());
+    } __except (EXCEPTION_EXECUTE_HANDLER) {
+        printf("[SEH] assploded\n");
+    }
+}
+
+auto ProcessEvent::convert(void* params) -> uint8_t* {
+    __try {
+        return static_cast<uint8_t*>(params);
+    } __except (EXCEPTION_EXECUTE_HANDLER) {
+        printf("[SEH] assploded on convert\n");
+        return nullptr;
+    }
+}
+
 
 void __fastcall ProcessEvent::handleFunction(UObject* self, UFunction* fn, void* params, void* result) {
     if (!fastIsAcquired()) {
         reinterpret_cast<tProcessEvent>(bakkesTrampolineFn_)(self, fn, params, result);
+        return;
+    }
+
+    if (fn && fn->GetFullName() == "Function ProjectX.EOSMetrics_X.HandleCrash") {
+        return;
+    }
+
+    if (fn && fn->GetFullName().find("ProjectX.CrashReport") != std::string::npos) {
         return;
     }
 
@@ -240,29 +267,6 @@ void __fastcall ProcessEvent::handleFunction(UObject* self, UFunction* fn, void*
         //    return;
         //}
         if (fn && fn->GetFullName().find("GetMapName") != std::string::npos) {
-            struct P {
-                uint32_t bIncludePrefix;
-                FString ReturnValue = {};
-            };
-
-
-            printf("[PE HOOK] GetMapName hit on %s\n",
-                self->GetFullName().c_str());
-            printf("[PE HOOK] GetMapName fn: %s\n", fn->GetFullName().c_str());
-
-            auto model = UEModel::assignClassFromRawPtr(fn);
-            auto fnObj = static_cast<UFunctionEntry*>(model.get());
-            printf("[PE HOOK] Fn Type: %s\n", model->getFullName().c_str());
-            fnObj->iterateDependencies();
-            //for (auto param : fnObj->getAllParams()) {
-            //    uint8_t* base = static_cast<uint8_t*>(params);
-            //    void* valuePtr = base + param->getOffset();
-            //    ResolvedValue out;
-            //    param->resolveInto(out, valuePtr);
-            //    if (!out.primitiveStr.empty()) {
-            //        printf(" resolved: %s\n", out.primitiveStr.c_str());
-            //    }
-            //}
         }
 
         // run prehooks
@@ -280,6 +284,43 @@ void __fastcall ProcessEvent::handleFunction(UObject* self, UFunction* fn, void*
 
         // conditional hooks
         dispatch->dispatchGated(fn->ObjectInternalInteger, context);
+
+        if (fn && fn->GetFullName().find("Map") != std::string::npos) {
+            const auto model = UEModel::assignClassFromRawPtr(fn);
+            const auto fnObj = static_cast<UFunctionEntry*>(model.get());
+            fnObj->iterateDependencies();
+            printStr("fn", fnObj->getFullName());
+            for (const auto param : fnObj->getAllParams()) {
+                const auto base = convert(params);
+                void* valuePtr = base + param->getOffset();
+                ResolvedValue out;
+                param->resolveInto(out, valuePtr);
+                Printer::debugPrint(out);
+            }
+        }
+
+        {
+            auto lambda = ([&]() {
+                if (fn && fn->GetFullName().find("Map") != std::string::npos) {
+                    const auto model = UEModel::assignClassFromRawPtr(fn);
+                    const auto fnObj = static_cast<UFunctionEntry*>(model.get());
+                    fnObj->iterateDependencies();
+                    printStr("fn", fnObj->getFullName());
+                    for (const auto param : fnObj->getAllParams()) {
+                        const auto base = convert(params);
+                        void* valuePtr = base + param->getOffset();
+                        ResolvedValue out;
+                        param->resolveInto(out, valuePtr);
+                        Printer::debugPrint(out);
+                    }
+                }
+            });
+            auto func = lambda;
+            auto safeFunc = safe::makeSEHSafe([&]() {
+                func();
+            });
+            safeFunc();
+        }
     } else {
         // dispatcher is MIA fallback
         reinterpret_cast<tProcessEvent>(bakkesTrampolineFn_)(self, fn, params, result);

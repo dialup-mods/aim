@@ -1,6 +1,7 @@
 #pragma once
 #include <memory>
 
+class UObject;
 class ObjectEntry;
 
 namespace UEModel {

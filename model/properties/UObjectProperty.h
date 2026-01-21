@@ -8,13 +8,13 @@
 
 #include "LayoutTraits.h"
 #include "Property.h"
-#include "resolve/ObjectRef.h"
+#include "resolve/ObjectRefResolver.h"
 
 class UObjectPropertyEntry : public PropertyEntry, LayoutTraits<UObjectProperty, UProperty> {
 public:
     using PropertyEntry::PropertyEntry;
 
-    void resolveInto(MyResolvedValue& out, void* valuePtr) const override {
+    void resolveInto(ResolvedValue& out, void* valuePtr) const override {
         ObjectRefResolver::resolve(out, valuePtr, *reinterpret_cast<UObject**>(valuePtr));
     }
 

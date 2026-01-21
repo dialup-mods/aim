@@ -8,13 +8,13 @@
 
 #include "LayoutTraits.h"
 #include "Property.h"
-#include "resolve/Float.h"
+#include "resolve/FloatResolver.h"
 
 class UFloatPropertyEntry final : public PropertyEntry, LayoutTraits<UFloatProperty, UProperty> {
 public:
     using PropertyEntry::PropertyEntry;
 
-    void resolveInto(MyResolvedValue& out, void* valuePtr) const override {
+    void resolveInto(ResolvedValue& out, void* valuePtr) const override {
         FloatResolver::resolve(out, valuePtr);
     }
 

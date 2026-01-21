@@ -26,59 +26,59 @@ public:
     }
 
     void emit(FILE* file, const std::string& package) override {
-        if (!asEnum() || asEnum()->Names.empty()) {
-            return;
-        }
-
-        auto enumName = getSanitizedName();
-        enumName = enumName == "SearchStatusOwner" ? "ESearchStatusOwner" : enumName;
-
-        auto fullName = getFullName();
-
-        std::map<std::string, size_t> enumValues;
-
-        // annoying mode
-        //fprintf(file, "// %s\n", fullName.c_str());
-
-        if (prefixWithClass()) {
-            fprintf(file, "enum class %s : %s {\n",
-                enumName.c_str(),
-                "uint8_t" // fixme? GConfig::GetEnumClassType().c_str());
-            );
-        } else {
-            fprintf(file, "enum %s {\n", enumName.c_str());
-        }
-
-        for (int32_t i = 0; i < asEnum()->Names.size(); ++i) {
-            std::string propertyName = sanitizeStr(asEnum()->Names[i].ToString());
-
-            // Replace _MAX with _END (UE4 convention workaround)
-            if (const size_t maxPos = propertyName.find("_MAX"); maxPos != std::string::npos) {
-                propertyName.replace(maxPos, 4, "_END");
-            }
-
-            if (!prefixWithClass()) {
-                propertyName.insert(0, enumName + "_");
-            }
-
-            if (!propertyName.starts_with("E")) {
-                propertyName.insert(0, "E");
-            }
-
-            std::string finalName = propertyName;
-            if (enumValues.contains(propertyName)) {
-                finalName += std::to_string(enumValues[propertyName]);
-                enumValues[propertyName]++;
-            } else {
-                enumValues[propertyName] = 1;
-            }
-
-            fprintf(file, "    %s = %d%s\n",
-                finalName.c_str(),
-                i,
-                (i != asEnum()->Names.size() - 1) ? "," : "");
-        }
-
-        fputs("};\n\n", file);
+//        if (!asEnum() || asEnum()->Names.empty()) {
+//            return;
+//        }
+//
+//        auto enumName = getSanitizedName();
+//        enumName = enumName == "SearchStatusOwner" ? "ESearchStatusOwner" : enumName;
+//
+//        auto fullName = getFullName();
+//
+//        std::map<std::string, size_t> enumValues;
+//
+//        // annoying mode
+//        //fprintf(file, "// %s\n", fullName.c_str());
+//
+//        if (prefixWithClass()) {
+//            fprintf(file, "enum class %s : %s {\n",
+//                enumName.c_str(),
+//                "uint8_t" // fixme? GConfig::GetEnumClassType().c_str());
+//            );
+//        } else {
+//            fprintf(file, "enum %s {\n", enumName.c_str());
+//        }
+//
+//        for (int32_t i = 0; i < asEnum()->Names.size(); ++i) {
+//            std::string propertyName = sanitizeStr(asEnum()->Names[i].ToString());
+//
+//            // Replace _MAX with _END (UE4 convention workaround)
+//            if (const size_t maxPos = propertyName.find("_MAX"); maxPos != std::string::npos) {
+//                propertyName.replace(maxPos, 4, "_END");
+//            }
+//
+//            if (!prefixWithClass()) {
+//                propertyName.insert(0, enumName + "_");
+//            }
+//
+//            if (!propertyName.starts_with("E")) {
+//                propertyName.insert(0, "E");
+//            }
+//
+//            std::string finalName = propertyName;
+//            if (enumValues.contains(propertyName)) {
+//                finalName += std::to_string(enumValues[propertyName]);
+//                enumValues[propertyName]++;
+//            } else {
+//                enumValues[propertyName] = 1;
+//            }
+//
+//            fprintf(file, "    %s = %d%s\n",
+//                finalName.c_str(),
+//                i,
+//                (i != asEnum()->Names.size() - 1) ? "," : "");
+//        }
+//
+//        fputs("};\n\n", file);
     }
 };

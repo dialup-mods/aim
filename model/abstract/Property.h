@@ -11,55 +11,13 @@
 
 #include "ValueResolver.h"
 
-//
-//
-//Option 2: Strongly-typed access via templated helpers
-//
-//If you want compile-time type safety where possible:
-//
-//template<typename T>
-//T& PropertyEntry::getValue(void* params) const {
-//    return *reinterpret_cast<T*>(
-//        static_cast<uint8_t*>(params) + getOffset()
-//    );
-//}
-//
-//Then gate it using canonical type checks:
-//
-//if (prop->getCanonicalType() == "uint32_t") {
-//    uint32_t v = prop->getValue<uint32_t>(params);
-//}
-//This is ideal for mutation hooks.
-
-
-// make getCanonicalType getCanonicalTypeStr
-// then have it return the enum
-// access like:
-//
-// void PropertyEntry::setValue(void* params, const Variant& val) {
-//     void* v = getValuePtr(params);
-//
-//     switch (getCanonicalType()) {
-//         case CanonicalType::Int32:
-//             *reinterpret_cast<int32_t*>(v) = val.as<int32_t>();
-//             break;
-//
-//         case CanonicalType::Bool:
-//             setBool(v, val.as<bool>());
-//             break;
-//
-//             // etc
-//     }
-// }
-
-
 class PropertyEntry : public ObjectEntry {
 public:
     using ObjectEntry::ObjectEntry;
 
 protected:
     template<typename Resolver>
-    void resolveVia(MyResolvedValue& out, void* valuePtr) const {
+    void resolveVia(ResolvedValue& out, void* valuePtr) const {
         static_cast<const Resolver*>(this)->Resolver::resolveInto(out, valuePtr);
     }
 
@@ -69,22 +27,22 @@ public:
         return static_cast<uint8_t*>(params) + getOffset();
     }
 
-    virtual auto getResolvedKind() const -> MyResolvedValue::Kind = 0;
-    virtual auto getStorageType() const -> MyResolvedValue::StorageType = 0;
-    // fixme need to implement on others
+    // fixme need to implement on others maybe
+    // virtual auto getResolvedKind() const -> ResolvedValue::Kind { return ResolvedValue::Kind::Unknown; }
+    // virtual auto getStorageType() const -> ResolvedValue::StorageType { return ResolvedValue::StorageType::Unknown; };
     //virtual void resolveInto(ResolvedValue& out, void* valuePtr) const = 0;
-    virtual void resolveInto(MyResolvedValue& out, void* valuePtr) const {}
+    virtual void resolveInto(ResolvedValue& out, void* valuePtr) const {}
 
-    auto resolveValue(void* params) const -> MyResolvedValue {
-        MyResolvedValue v;
-        v.mKind = getResolvedKind();
-        // fixme move these to class and outside of the resolvers for reuse with SDK
-        v.data = getValuePtr(params);
-        v.mStorage = getStorageType();
+    //auto resolveValue(void* params) const -> MyResolvedValue {
+    //    MyResolvedValue v;
+    //    v.mKind = getResolvedKind();
+    //    // fixme move these to class and outside of the resolvers for reuse with SDK
+    //    v.data = getValuePtr(params);
+    //    v.mStorage = getStorageType();
 
-        resolveInto(v, v.data);
-        return v;
-    }
+    //    resolveInto(v, v.data);
+    //    return v;
+    //}
 
 //    auto toString(void *params) const -> std::string {
 //        void* v = getValuePtr(params);

@@ -8,13 +8,13 @@
 
 #include "LayoutTraits.h"
 #include "Property.h"
-#include "resolve/FName.h"
+#include "resolve/FNameResolver.h"
 
 class UNamePropertyEntry final : public PropertyEntry, LayoutTraits<UNameProperty, UProperty> {
 public:
     using PropertyEntry::PropertyEntry;
 
-    void resolveInto(MyResolvedValue& out, void* valuePtr) const override {
+    void resolveInto(ResolvedValue& out, void* valuePtr) const override {
         FNameResolver::resolve(out, valuePtr);
     }
 

@@ -196,7 +196,7 @@ public:
 
             auto propName = prop->getSanitizedName();
             const auto arrayDim = prop->getArrayDim();
-            const auto type = prop->getCanonicalType();
+            const auto type = prop->getCanonicalTypeStr();
             const auto flagStr = FlagStrings::getInterestingPropertyFlagsString(prop->getPropertyFlags());
 
             // insert pre-padding if needed

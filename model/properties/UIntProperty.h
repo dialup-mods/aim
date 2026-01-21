@@ -9,13 +9,13 @@
 
 #include "LayoutTraits.h"
 #include "Property.h"
-#include "resolve/Integer.h"
+#include "resolve/IntegerResolver.h"
 
 class UIntPropertyEntry final : public PropertyEntry, LayoutTraits<UIntProperty, UProperty> {
 public:
     using PropertyEntry::PropertyEntry;
 
-    void resolveInto(MyResolvedValue& out, void* valuePtr) const override {
+    void resolveInto(ResolvedValue& out, void* valuePtr) const override {
         IntegerResolver::resolve(out, valuePtr);
     }
 

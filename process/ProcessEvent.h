@@ -113,7 +113,11 @@ public:
     const std::shared_ptr<MutexGuard>& getMutex() const { return mutex_; }
     bool waitForUnlock(DWORD timeoutMs = 500) const;
     static bool fastIsAcquired();
-    
+
+    static void printStr(const std::string&, const std::string&);
+
+    static auto convert(void *params) -> uint8_t *;
+
     void applyDetour();
     void removeDetour();
 

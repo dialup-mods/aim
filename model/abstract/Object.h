@@ -14,6 +14,7 @@
 #include "EClassTypes.h"
 #include "Schema.h"
 #include "TypeRules.h"
+#include "Runtime.h"
 
 class ObjectEntry {
 public:
@@ -164,22 +165,22 @@ public:
 
     virtual auto getName() const -> std::string {
         if (name_.empty()) {
-            if (getObject() && getObject()->Name.IsValid()) {
-                name_ = getObject()->Name.ToString();
+            if (getObject() && getObject()->Name.FNameEntryId) {
+                name_ = Runtime::getFNameEntryName(getObject()->Name.FNameEntryId);
             }
         }
         return name_;
     }
 
     virtual auto getFullName() const -> std::string {
-        if (!getObject()->Class || !getObject()->Outer || !getObject()->Name.IsValid()) {
+        if (!getObject()->Class || !getObject()->Outer) {
             return "<incomplete>";
         }
         if (getObject()->Outer && getObject()->Class) {
             fullName_ = getObject()->GetFullName();
             return fullName_;
         }
-        return getObject()->Name.ToString();
+        return Runtime::getFNameEntryName(getObject()->Name.FNameEntryId);
     }
 
     auto
@@ -243,7 +244,7 @@ public:
     virtual auto getOuterNameCPP() const -> std::string {
         if (!outerNameCPP_.empty()) return outerNameCPP_;
 
-        if (UObject* outer = getOuter(); outer && outer->Name.IsValid()) {
+        if (UObject* outer = getOuter(); outer && outer->Name.FNameEntryId) {
             outerNameCPP_ = outer->GetNameCPP();
         } else {
             outerNameCPP_ = "<no_outer_cpp>";

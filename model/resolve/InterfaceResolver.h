@@ -33,9 +33,10 @@ struct DelegateResolver {
         out.kind = ResolvedValue::Kind::Interface;
 
         out.interface->object = interface->Object;
-        out.interface->objectName = interface->Object->GetFullName();
-        out.interface->iClassName =
-            interface->Object->Class ? interface->Object->Class->GetName() : "<Unknown>";
+        // fixme engine gate
+        //out.interface->objectName = interface->Object->GetFullName();
+        //out.interface->className =
+        //    interface->Object->Class ? interface->Object->Class->GetName() : "<Unknown>";
 
         out.interface->interfacePtr = reinterpret_cast<uintptr_t>(interface->Interface);
     }

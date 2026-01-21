@@ -8,13 +8,13 @@
 
 #include "LayoutTraits.h"
 #include "Property.h"
-#include "resolve/Byte.h"
+#include "resolve/ByteResolver.h"
 
 class UBytePropertyEntry final : public PropertyEntry, LayoutTraits<UByteProperty, UProperty> {
 public:
     using PropertyEntry::PropertyEntry;
 
-    void resolveInto(MyResolvedValue& out, void* valuePtr) const override {
+    void resolveInto(ResolvedValue& out, void* valuePtr) const override {
         ByteResolver::resolve(out, valuePtr, asByteProperty()->Enum);
     }
 
