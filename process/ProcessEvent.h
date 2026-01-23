@@ -121,7 +121,7 @@ public:
     void applyDetour();
     void removeDetour();
 
-    static void __fastcall handleFunction(UObject* self, UFunction* fn, void* params, void* result);
+    static void __fastcall handleFunction(UObject* self, UFunction* fn, void* paramsPtr, void* resultPtr);
 };
 
 // clang-format on

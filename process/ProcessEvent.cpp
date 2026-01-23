@@ -22,7 +22,7 @@
 #include "MutexGuard.h"
 #include "PluginFence.h"
 
-#include "UEModelTypes.h"
+#include "AllModelTypes.h"
 #include "ValueResolver.h"
 namespace p = patchutils;
 
@@ -240,9 +240,13 @@ auto ProcessEvent::convert(void* params) -> uint8_t* {
 }
 
 
-void __fastcall ProcessEvent::handleFunction(UObject* self, UFunction* fn, void* params, void* result) {
+// Parms is just a blob
+// UProperty::Offset is the meaning
+// The function object provides the schema
+// PE source: https://github.com/CodeRedModding/UnrealEngine3/blob/main/Development/Src/Core/Src/UnCorSc.cpp#L6270
+void __fastcall ProcessEvent::handleFunction(UObject* self, UFunction* fn, void* paramsPtr, void* resultPtr) {
     if (!fastIsAcquired()) {
-        reinterpret_cast<tProcessEvent>(bakkesTrampolineFn_)(self, fn, params, result);
+        reinterpret_cast<tProcessEvent>(bakkesTrampolineFn_)(self, fn, paramsPtr, resultPtr);
         return;
     }
 
@@ -253,6 +257,69 @@ void __fastcall ProcessEvent::handleFunction(UObject* self, UFunction* fn, void*
     if (fn && fn->GetFullName().find("ProjectX.CrashReport") != std::string::npos) {
         return;
     }
+
+    //if (fn && fn->GetFullName() == "Function TAGame.GFxData_Chat_TA.OnQuickChatAdded") {
+    if (fn && fn->GetFullName().find("PopUpOnlyNotification") != std::string::npos) {
+        printf("[PE] (pre): %s\n", fn->GetFullName().c_str());
+        printf("     -> fn     %s\n", fn->GetFullName().c_str());
+        printf("     -> ptr    %p\n", fn->VfTableObject.Ptr);
+        printf("     -> self   %s\n", self->GetFullName().c_str());
+        printf("     -> ptr    %p\n", self->VfTableObject.Ptr);
+        printf("     -> params %p\n", static_cast<void*>(&paramsPtr));
+
+        const auto base = static_cast<uint8_t*>(paramsPtr);
+
+        for (auto prop = static_cast<UProperty*>(fn->Children);
+             prop;
+             prop = static_cast<UProperty*>(prop->Next))
+        {
+            if (!(prop->PropertyFlags & CPF_Parm)) { continue; }
+
+            for (int i = 0; i < prop->ArrayDim; ++i) {
+                printf("i: %i\n", i);
+                void* valuePtr = base + prop->Offset + i * prop->ElementSize;
+                ResolvedValue out;
+                auto propEntry = UEModel::assignClass(prop);
+                printf(" %s\n", propEntry->getCanonicalTypeStr().c_str());
+                propEntry->resolveInto(out, valuePtr);
+                Printer::debugPrint(out);
+            }
+        }
+        //{
+        //    const auto fnObj = UEModel::assignClassFromRawPtr(fn).get()->as<UFunctionEntry>();
+        //    int i = 0;
+        //    for (auto param : fnObj->getAllParams()) {
+        //        printf(" sdk i: %i\n", i++);
+        //        auto valuePtr = param->getValuePtr(paramsPtr);
+        //        ResolvedValue out;
+        //        printf(" %s\n", param->getCanonicalTypeStr().c_str());
+        //        param->resolveInto(out, valuePtr);
+        //        Printer::debugPrint(out);
+        //}
+    }
+
+    //{
+        //auto lambda = ([&]() {
+        //    if (fn && fn->GetFullName() == "Function TAGame.GFxData_Chat_TA.OnQuickChatAdded")
+        //    { // fn params
+        //        const auto model = UEModel::assignClassFromRawPtr(fn);
+        //        const auto fnObj = static_cast<UFunctionEntry*>(model.get());
+        //        printStr("pre fn", fnObj->getFullName());
+        //        for (const auto fnParam : fnObj->getAllParams()) {
+        //            const auto base = convert(params);
+        //            void* valuePtr = base + fnParam->getOffset();
+        //            ResolvedValue out;
+        //            fnParam->resolveInto(out, valuePtr);
+        //            Printer::debugPrint(out);
+        //        }
+        //    }
+        //});
+        //auto func = lambda;
+        //auto safeFunc = safe::makeSEHSafe([&]() {
+        //    func();
+        //});
+        //safeFunc();
+    //}
 
     // todo: add backpressure monitoring
     // start frame timing
@@ -266,63 +333,52 @@ void __fastcall ProcessEvent::handleFunction(UObject* self, UFunction* fn, void*
         //    dispatch->deferTask(fn->ObjectInternalInteger, context);
         //    return;
         //}
-        if (fn && fn->GetFullName().find("GetMapName") != std::string::npos) {
-        }
-
         // run prehooks
-        auto context = InvocationContext::makeProcessEventContext(self, fn, params);
+        auto context = InvocationContext::makeProcessEventContext(self, fn, paramsPtr);
         if (auto shouldBlock = dispatch->dispatchPre(fn->ObjectInternalInteger, context)) {
             return;
         }
 
         // call original function
-        reinterpret_cast<tProcessEvent>(bakkesTrampolineFn_)(self, fn, params, result);
+        reinterpret_cast<tProcessEvent>(bakkesTrampolineFn_)(self, fn, paramsPtr, resultPtr);
 
         // create a context with fn result
-        context = InvocationContext::makeProcessEventContext(self, fn, params, result);
+        context = InvocationContext::makeProcessEventContext(self, fn, paramsPtr, resultPtr);
         dispatch->dispatchPost(fn->ObjectInternalInteger, context);
 
         // conditional hooks
         dispatch->dispatchGated(fn->ObjectInternalInteger, context);
 
-        if (fn && fn->GetFullName().find("Map") != std::string::npos) {
-            const auto model = UEModel::assignClassFromRawPtr(fn);
-            const auto fnObj = static_cast<UFunctionEntry*>(model.get());
-            fnObj->iterateDependencies();
-            printStr("fn", fnObj->getFullName());
-            for (const auto param : fnObj->getAllParams()) {
-                const auto base = convert(params);
-                void* valuePtr = base + param->getOffset();
-                ResolvedValue out;
-                param->resolveInto(out, valuePtr);
-                Printer::debugPrint(out);
-            }
-        }
+        if (fn && fn->GetFullName().find("PopUpOnlyNotification") != std::string::npos) {
+            printf("[PE] (post): %s\n", fn->GetFullName().c_str());
+            printf("  -> fn:    %s\n", fn->GetFullName().c_str());
+            printf("              -> %p\n", fn->VfTableObject.Ptr);
+            printf("  -> self: %s\n", self->GetFullName().c_str());
+            printf("              -> %p\n", self->VfTableObject.Ptr);
+            printf("  -> params %p\n", static_cast<void*>(&paramsPtr));
+            if (fn && paramsPtr && fn->ParmsSize != 0) {
+                const auto base = static_cast<uint8_t*>(paramsPtr);
 
-        {
-            auto lambda = ([&]() {
-                if (fn && fn->GetFullName().find("Map") != std::string::npos) {
-                    const auto model = UEModel::assignClassFromRawPtr(fn);
-                    const auto fnObj = static_cast<UFunctionEntry*>(model.get());
-                    fnObj->iterateDependencies();
-                    printStr("fn", fnObj->getFullName());
-                    for (const auto param : fnObj->getAllParams()) {
-                        const auto base = convert(params);
-                        void* valuePtr = base + param->getOffset();
+                for (UProperty* prop = static_cast<UProperty*>(fn->Children);
+                     prop;
+                     prop = static_cast<UProperty*>(prop->Next))
+                {
+                    if (!(prop->PropertyFlags & CPF_Parm)) { continue; }
+
+                    for (int i = 0; i < prop->ArrayDim; ++i) {
+                        printf("i: %i\n", i);
+                        void* valuePtr = base + prop->Offset + i * prop->ElementSize;
                         ResolvedValue out;
-                        param->resolveInto(out, valuePtr);
+                        auto propEntry = UEModel::assignClass(prop);
+                        printf(" %s\n", propEntry->getCanonicalTypeStr().c_str());
+                        propEntry->resolveInto(out, valuePtr);
                         Printer::debugPrint(out);
                     }
                 }
-            });
-            auto func = lambda;
-            auto safeFunc = safe::makeSEHSafe([&]() {
-                func();
-            });
-            safeFunc();
+            }
         }
     } else {
         // dispatcher is MIA fallback
-        reinterpret_cast<tProcessEvent>(bakkesTrampolineFn_)(self, fn, params, result);
+        reinterpret_cast<tProcessEvent>(bakkesTrampolineFn_)(self, fn, paramsPtr, resultPtr);
     }
 }
