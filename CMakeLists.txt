@@ -43,8 +43,14 @@ set(INCLUDES
     ${CMAKE_SOURCE_DIR}/model/abstract
     ${CMAKE_SOURCE_DIR}/model/base
     ${CMAKE_SOURCE_DIR}/model/helpers
+    ${CMAKE_SOURCE_DIR}/model/observe
     ${CMAKE_SOURCE_DIR}/model/properties
     ${CMAKE_SOURCE_DIR}/model/resolve
+    ${CMAKE_SOURCE_DIR}/model/store
+    ${CMAKE_SOURCE_DIR}/model/types
+    # fixme should move schema and runtime out of the plugin stuff
+    # so that no one's tempted to pull in SDK dependencies (aside from schema/runtime)
+    # would be easier if we didn't need the UObject def
     ${DIALUP_INSTALL_DIR}/sdk-plugin/include
 )
 
