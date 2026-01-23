@@ -54,4 +54,7 @@ run:
 		'
 	"$(INJECTOR)" "$(target)" "$(binary_dir)/$(DLL_RAND_NAME).dll"
 	"$(INJECTOR)" "$(target)" "$(binary_dir)/$(SDK_RAND_NAME).dll"
-	"$(INJECTOR)" "$(target)" "$(DLL)"
+
+ls-procs: check-shell
+	powershell -Command "tasklist /m $$(cat dll_filename).dll"
+	powershell -Command "tasklist /m $$(cat dll_filename_sdk).dll"
