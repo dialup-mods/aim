@@ -52,12 +52,10 @@ Worker(const LPVOID lpParam) {
 
         RuntimeTest test;
         test.run();
-
-        test::terminal::tryFreeConsole();
     }
     removeCrashShield();
 
-    Sleep(1500);
+    Sleep(300);
     FreeLibraryAndExitThread(static_cast<HMODULE>(lpParam), 0);
 }
 
