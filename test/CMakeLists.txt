@@ -41,7 +41,7 @@ target_link_libraries(${PROJECT_NAME} PRIVATE DialUp-SDK::DialUp-SDK)
 find_package(DialUp REQUIRED PATHS ${DIALUP_INSTALL_DIR})
 target_link_libraries(${PROJECT_NAME} PRIVATE DialUp::DialUp)
 
-file(TO_CMAKE_PATH "$ENV{LOCALAPPDATA}/DialUpFramework/SDK-Plugin/bin/DialUp-SDK.dll" SDK_DLL)
+file(TO_CMAKE_PATH "$ENV{LOCALAPPDATA}/DialUp/sdk-plugin/bin/DialUp-SDK.dll" SDK_DLL)
 target_compile_definitions(${PROJECT_NAME} PRIVATE TEST_BUILD)
 target_compile_definitions(${PROJECT_NAME} PRIVATE SDK_DLL="${SDK_DLL}")
 target_compile_definitions(${PROJECT_NAME} PRIVATE _CRT_SECURE_NO_WARNINGS)
