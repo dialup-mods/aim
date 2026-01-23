@@ -6,7 +6,7 @@
 #pragma once
 #include <vector>
 
-#include "Logger.h"
+#include "../Logger.h"
 #include "ObjectStore.h"
 #include "UScriptStruct.h"
 #include "UClass.h"

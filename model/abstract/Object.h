@@ -13,8 +13,10 @@
 #include "ConfigManager.h"
 #include "EClassTypes.h"
 #include "Schema.h"
+#include "SDK.h"
 #include "TypeRules.h"
 #include "Runtime.h"
+#include "ValueResolver.h"
 
 class ObjectEntry {
 public:
@@ -25,11 +27,18 @@ public:
         origin_ = origin;
     }
 
+    template<typename T>
+    T* as() {
+        return dynamic_cast<T*>(this);
+    }
+
     static auto UObjectClass() -> UClass* {
         static UClass* cached =
             Runtime::findClass("Class Core.Object");
         return cached;
     }
+
+    virtual void resolveInto(ResolvedValue& out, void* valuePtr) const {}
 
     inline static const std::unordered_set<std::string> EMPTY_STR_SET;
 
@@ -58,11 +67,6 @@ public:
         static std::once_flag flag;
 
         return cached;
-    }
-
-    template<typename T>
-    T* as() {
-        return dynamic_cast<T*>(this);
     }
 
     virtual void emitForwardDeclaration(FILE* file) {};

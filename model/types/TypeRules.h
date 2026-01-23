@@ -10,7 +10,7 @@
 #include "fkYAML/node.hpp"
 
 #include "ConfigManager.h"
-#include "Logger.h"
+#include "../Logger.h"
 
 struct StringHash {
     using is_transparent = void;

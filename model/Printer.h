@@ -1,7 +1,6 @@
 #pragma once
 #include <string>
 
-#include "StructLike.h"
 #include "ValueResolver.h"
 
 struct PrintOptions {
@@ -11,31 +10,46 @@ struct PrintOptions {
     int  maxDepth = 2;
 };
 
-//class Printer {
-//public:
-//    static std::string print(
-//        const ResolvedValue& v,
-//        const PrintOptions& opts = {}
-//    );
-//
-//    static auto debugPrint(const ResolvedValue &v) -> std::string {
-//        switch (v.kind) {
-//            case ResolvedValue::Kind::ObjectRef:
-//                return v.objectName.empty() ? "<object>" : v.objectName;
-//
-//            case ResolvedValue::Kind::Struct:
-//                return "<struct " + std::string(v.schema->getName()) + ">";
-//
-//            case ResolvedValue::Kind::Array:
-//                return "<array>";
-//
-//            default:
-//                return v.primitiveStr.empty()
-//                    ? "<unprinted>"
-//                    : v.primitiveStr;
-//        }
-//    }
-//};
+class Printer {
+public:
+    static std::string print(
+        const ResolvedValue& v,
+        const PrintOptions& opts = {}
+    );
+
+    static auto debugPrint(const ResolvedValue &v) -> std::string {
+        switch (v.kind) {
+            case ResolvedValue::Kind::ObjectRef:
+                return v.objectName.empty() ? "<object>" : v.objectName;
+
+            case ResolvedValue::Kind::Struct:
+                return "<struct>";
+
+            case ResolvedValue::Kind::Array:
+                return "<array>";
+
+            case ResolvedValue::Kind::Enum:
+                return "<enum>";
+
+            case ResolvedValue::Kind::String:
+                return v.primitiveStr;
+
+            case ResolvedValue::Kind::Delegate:
+                return "<delegate>";
+
+            case ResolvedValue::Kind::Float:
+                return v.primitiveStr;
+
+            case ResolvedValue::Kind::Unknown:
+                return "<unknown>";
+
+            default:
+                return v.primitiveStr.empty()
+                    ? "<unprinted>"
+                    : v.primitiveStr;
+        }
+    }
+};
 
 //std::string print(const ResolvedValue& v, const PrintOptions& opts) {
 //    switch (v.kind) {
