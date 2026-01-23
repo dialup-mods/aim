@@ -44,15 +44,34 @@ class ObjectProvider : public IObjectProvider {
     // fix me, use flags, see getInstanceOf
     template<typename T>
     bool isValidLiveInstance(T* obj) {
-        if (!obj)
-            return false;
+        if (!obj) { return false; }
         auto name = obj->GetFullName();
         return name.find("Default__") == std::string::npos && name.find("Archetype") == std::string::npos &&
             name.find("PostGameLobby") == std::string::npos && name.find("Test") == std::string::npos;
     }
 
-    template<typename T, typename Func>
-    void forEachValidLiveObject(Func&& func) {
+    // usage:
+    // forEachObject<UFunction>([](UFunction* fn) {
+    //     printf("Function: %s", *fn->GetFullName());
+    // });
+    template<typename T, typename Predicate>
+    void forEachObject(Predicate&& pred) {
+        auto& objects = Runtime::getUObjects();
+        const int32_t limit = std::min(iterateLimit_, objects.size());
+
+        for (int32_t i = objects.size(); i-- > limit; ) {
+            UObject* obj = objects.at(i);
+
+            if (!obj || !obj->Class || !obj->IsA(T::StaticClass())) {
+                continue;
+            }
+
+            pred(static_cast<T*>(obj));
+        }
+    }
+
+    template<typename T, typename Predicate>
+    void forEachValidLiveObject(Predicate&& pred) {
         static_assert(std::is_base_of_v<UObject, T>, "T must be a UObject-derived type");
 
         auto& objects = Runtime::getUObjects();
@@ -69,10 +88,7 @@ class ObjectProvider : public IObjectProvider {
 
             if (!obj->IsA(T::StaticClass())) { continue; }
 
-            if (obj->HasAnyFlags(static_cast<EObjectFlags>(RF_BeginDestroyed || RF_FinishDestroyed))) { continue; }
-
-            const std::string& fullName = obj->GetFullName();
-            if (fullName.find("Default__") != std::string::npos) { continue; } // skip class default objects
+            if (obj->HasAnyFlags(static_cast<EObjectFlags>(RF_BeginDestroyed || RF_FinishDestroyed || RF_DefaultOrArchetypeFlags))) { continue; }
 
             // fixme special checks for UGFxData_Chat_TA
             if constexpr (std::is_same_v<T, UGFxData_Chat_TA>) {
@@ -81,28 +97,15 @@ class ObjectProvider : public IObjectProvider {
                     continue;
             }
 
-            func(static_cast<T*>(obj));
+            if (!pred(static_cast<T*>(obj))) {
+                break;
+            }
         }
     }
 
     template<typename T>
     T* findLiveInstanceOf() {
         return findFirstWhere<T>([](T*) { return true; });
-    }
-
-    template<typename T, typename Predicate>
-    void forEachObject(Predicate&& pred) {
-        auto& objects = Runtime::getUObjects();
-        const size_t limit = std::min(iterateLimit_, objects.size());
-
-        for (size_t i = 0; i < limit; --i) {
-            UObject* obj = objects.at(i);
-
-            if (!obj || !obj->Class || !obj->IsA(T::StaticClass()))
-                continue;
-
-            pred(static_cast<T*>(obj));
-        }
     }
 
     template<typename T>
@@ -120,7 +123,7 @@ class ObjectProvider : public IObjectProvider {
         forEachValidLiveObject<T>([&](T* candidate) {
             if (predicate(candidate)) {
                 result = candidate;
-                return;
+                return false; // stop iteration
             }
         });
 
@@ -523,25 +526,14 @@ class ObjectProvider : public IObjectProvider {
         auto& objects = Runtime::getUObjects();
         const size_t limit = std::min(iterateLimit_, objects.size());
 
-        for (size_t i = 0; i < limit; --i) {
+        for (int32_t i = objects.size() - 1; i >= 0; --i) {
             UObject* obj = objects.at(i);
             if (!obj) { continue; }
-
-            //            uintptr_t addr = reinterpret_cast<uintptr_t>(obj);
-            //            if (addr < 0x10000 || addr > 0xFFFFFFFFFF)
-            //                continue; // skip obviously bad memory
-
-            if (!obj->Class) {
-                continue; // skip if no valid class metadata
-            }
-
-            if (!obj->IsA(T::StaticClass())) {
-                continue; // not our type
-            }
-
             if (obj->HasAnyFlags(static_cast<EObjectFlags>(RF_ClassDefaultObject | RF_ArchetypeObject | RF_Transient))) { continue; }
-
+            if (!obj->Class) { continue; }
+            if (!obj->IsA(T::StaticClass())) { continue; }
             if (obj->IsPendingKill()) { continue; }
+            if (obj->IsArchetype()) { continue; }
 
             T* candidate = static_cast<T*>(obj);
 
