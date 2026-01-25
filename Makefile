@@ -27,3 +27,26 @@ install: check-shell
 
 clean: check-shell
 	@rm -rf build
+
+msvc-spawn:
+	@bash -c "if [ -f .build_status ]; do rm .build-status; done;"
+build-aim-tests:
+	@rm -f .build_status
+	@PANE_ID=$$(wezterm cli spawn --new-window); \
+	bash -c "while [ ! -f .build_status ]; do sleep 0.5; done; \
+		if grep -q OK .build_status; then \
+			echo '✓ Build succeeded'; \
+			wezterm cli kill-pane --pane-id $$PANE_ID; \
+		else \
+			echo '✗ Build FAILED - focusing build window'; \
+			wezterm cli activate-pane --pane-id $$PANE_ID; \
+		fi"
+#	@wezterm cli spawn --new-tab --cwd . --tab-title "MSVC Build" -- bash scripts/vs-build.sh 
+#	@bash -lc '\
+#		while [ ! -f .build_status ]; do sleep 0.5; done; \
+#		if grep -q OK .build_status; then \
+#			echo "✓ Build succeeded"; \
+#		else \
+#			echo "✗ Build FAILED - check build tab"; \
+#			wezterm cli activate-tab --tab-title "MSVC Build"; \
+#		fi'

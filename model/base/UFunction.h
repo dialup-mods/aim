@@ -15,7 +15,6 @@
 #include "FlagStrings.h"
 #include "LayoutTraits.h"
 #include "Object.h"
-#include "ObjectStore.h"
 #include "Property.h"
 #include "Schema.h"
 #include "SDK.h"

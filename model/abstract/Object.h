@@ -9,14 +9,15 @@
 #include <set>
 #include <string>
 
-#include "Runtime.h"
 #include "ConfigManager.h"
 #include "EClassTypes.h"
-#include "Schema.h"
-#include "SDK.h"
-#include "TypeRules.h"
 #include "Runtime.h"
+#include "SDK.h"
+#include "Schema.h"
+#include "TypeRules.h"
 #include "ValueResolver.h"
+
+using r = Runtime;
 
 class ObjectEntry {
 public:
@@ -34,7 +35,7 @@ public:
 
     static auto UObjectClass() -> UClass* {
         static UClass* cached =
-            Runtime::findClass("Class Core.Object");
+            Runtime::uclass::find("Class Core.Object");
         return cached;
     }
 
@@ -170,7 +171,7 @@ public:
     virtual auto getName() const -> std::string {
         if (name_.empty()) {
             if (getObject() && getObject()->Name.FNameEntryId) {
-                name_ = Runtime::getFNameEntryName(getObject()->Name.FNameEntryId);
+                name_ = Runtime::fname::game_pool::getString(getObject()->Name.FNameEntryId).value_or("");
             }
         }
         return name_;
@@ -184,7 +185,7 @@ public:
             fullName_ = getObject()->GetFullName();
             return fullName_;
         }
-        return Runtime::getFNameEntryName(getObject()->Name.FNameEntryId);
+        return getName();
     }
 
     auto
@@ -193,6 +194,7 @@ public:
             return type_;
         }
 
+        // fixme just switch on the flags
         if (getObject()->IsA<UByteProperty>())        type_ = EClassTypes::UByteProperty;
         else if (getObject()->IsA<UBoolProperty>())   type_ = EClassTypes::UBoolProperty;
         else if (getObject()->IsA<UIntProperty>())    type_ = EClassTypes::UIntProperty;

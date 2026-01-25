@@ -34,6 +34,7 @@
 #include "ICallFunction.h"
 #include "IProcessEvent.h"
 #include "IProcessInternal.h"
+#include "Toaster.h"
 
 // clang-format off
 
@@ -379,6 +380,7 @@ AIM::startup() {
             getLogger()->debug("AIM::init() processGates ready");
             getLogger()->debug("AIM gate setReady()");
         //    getGateReady()->setReady();
+
             setPluginReady();
         });
     });
