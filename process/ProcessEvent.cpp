@@ -11,7 +11,7 @@
 #include "PatchBuilder.h"
 #include "Dispatch.h"
 
-#include "../task/TaskBuilder.h"
+#include "TaskBuilder.h"
 #include "EventContext.h"
 #include "TaskStructs.h"
 
@@ -23,8 +23,11 @@
 #include "PluginFence.h"
 
 #include "AllModelTypes.h"
+#include "UEModel.h"
 #include "ValueResolver.h"
+#include "Runtime.h"
 namespace p = patchutils;
+using r = Runtime;
 
 ProcessEvent* ProcessEvent::instance_ = nullptr;
 
@@ -133,7 +136,7 @@ void ProcessEvent::clearTasks() {
 void* ProcessEvent::getRLFn() {
     if (processEventVTableFn_ != nullptr) { return processEventVTableFn_; }
 
-    auto fn = reinterpret_cast<void**>(UObject::StaticClass()->VfTableObject.Ptr)[getVTableIndex()];
+    auto fn = reinterpret_cast<void**>(r::uclass::find("Class Core.Object")->VfTableObject.Ptr)[getVTableIndex()];
     if (fn == nullptr || !safe::memory::isAddressAccessible(fn, sizeof(void*))) {
         log_->error("[PE] inaccessible memory");
         return nullptr;
@@ -250,53 +253,53 @@ void __fastcall ProcessEvent::handleFunction(UObject* self, UFunction* fn, void*
         return;
     }
 
-    if (fn && fn->GetFullName() == "Function ProjectX.EOSMetrics_X.HandleCrash") {
-        return;
-    }
+    //if (fn && fn->GetFullName() == "Function ProjectX.EOSMetrics_X.HandleCrash") {
+    //    return;
+    //}
 
-    if (fn && fn->GetFullName().find("ProjectX.CrashReport") != std::string::npos) {
-        return;
-    }
+    //if (fn && fn->GetFullName().find("ProjectX.CrashReport") != std::string::npos) {
+    //    return;
+    //}
 
     //if (fn && fn->GetFullName() == "Function TAGame.GFxData_Chat_TA.OnQuickChatAdded") {
-    if (fn && fn->GetFullName().find("PopUpOnlyNotification") != std::string::npos) {
-        printf("[PE] (pre): %s\n", fn->GetFullName().c_str());
-        printf("     -> fn     %s\n", fn->GetFullName().c_str());
-        printf("     -> ptr    %p\n", fn->VfTableObject.Ptr);
-        printf("     -> self   %s\n", self->GetFullName().c_str());
-        printf("     -> ptr    %p\n", self->VfTableObject.Ptr);
-        printf("     -> params %p\n", static_cast<void*>(&paramsPtr));
+    //if (fn && fn->GetFullName().find("PopUpOnlyNotification") != std::string::npos) {
+    //    printf("[PE] (pre): %s\n", fn->GetFullName().c_str());
+    //    printf("     -> fn     %s\n", fn->GetFullName().c_str());
+    //    printf("     -> ptr    %p\n", fn->VfTableObject.Ptr);
+    //    printf("     -> self   %s\n", self->GetFullName().c_str());
+    //    printf("     -> ptr    %p\n", self->VfTableObject.Ptr);
+    //    printf("     -> params %p\n", static_cast<void*>(&paramsPtr));
 
-        const auto base = static_cast<uint8_t*>(paramsPtr);
+    //    const auto base = static_cast<uint8_t*>(paramsPtr);
 
-        for (auto prop = static_cast<UProperty*>(fn->Children);
-             prop;
-             prop = static_cast<UProperty*>(prop->Next))
-        {
-            if (!(prop->PropertyFlags & CPF_Parm)) { continue; }
+    //    for (auto prop = static_cast<UProperty*>(fn->Children);
+    //         prop;
+    //         prop = static_cast<UProperty*>(prop->Next))
+    //    {
+    //        if (!(prop->PropertyFlags & CPF_Parm)) { continue; }
 
-            for (int i = 0; i < prop->ArrayDim; ++i) {
-                printf("i: %i\n", i);
-                void* valuePtr = base + prop->Offset + i * prop->ElementSize;
-                ResolvedValue out;
-                auto propEntry = UEModel::assignClass(prop);
-                printf(" %s\n", propEntry->getCanonicalTypeStr().c_str());
-                propEntry->resolveInto(out, valuePtr);
-                Printer::debugPrint(out);
-            }
-        }
-        //{
-        //    const auto fnObj = UEModel::assignClassFromRawPtr(fn).get()->as<UFunctionEntry>();
-        //    int i = 0;
-        //    for (auto param : fnObj->getAllParams()) {
-        //        printf(" sdk i: %i\n", i++);
-        //        auto valuePtr = param->getValuePtr(paramsPtr);
-        //        ResolvedValue out;
-        //        printf(" %s\n", param->getCanonicalTypeStr().c_str());
-        //        param->resolveInto(out, valuePtr);
-        //        Printer::debugPrint(out);
-        //}
-    }
+    //        for (int i = 0; i < prop->ArrayDim; ++i) {
+    //            printf("i: %i\n", i);
+    //            void* valuePtr = base + prop->Offset + i * prop->ElementSize;
+    //            ResolvedValue out;
+    //            auto propEntry = UEModel::assignClass(prop);
+    //            printf(" %s\n", propEntry->getCanonicalTypeStr().c_str());
+    //            propEntry->resolveInto(out, valuePtr);
+    //            Printer::debugPrint(out);
+    //        }
+    //    }
+    //    //{
+    //    //    const auto fnObj = UEModel::assignClassFromRawPtr(fn).get()->as<UFunctionEntry>();
+    //    //    int i = 0;
+    //    //    for (auto param : fnObj->getAllParams()) {
+    //    //        printf(" sdk i: %i\n", i++);
+    //    //        auto valuePtr = param->getValuePtr(paramsPtr);
+    //    //        ResolvedValue out;
+    //    //        printf(" %s\n", param->getCanonicalTypeStr().c_str());
+    //    //        param->resolveInto(out, valuePtr);
+    //    //        Printer::debugPrint(out);
+    //    //}
+    //}
 
     //{
         //auto lambda = ([&]() {
@@ -349,34 +352,34 @@ void __fastcall ProcessEvent::handleFunction(UObject* self, UFunction* fn, void*
         // conditional hooks
         dispatch->dispatchGated(fn->ObjectInternalInteger, context);
 
-        if (fn && fn->GetFullName().find("PopUpOnlyNotification") != std::string::npos) {
-            printf("[PE] (post): %s\n", fn->GetFullName().c_str());
-            printf("  -> fn:    %s\n", fn->GetFullName().c_str());
-            printf("              -> %p\n", fn->VfTableObject.Ptr);
-            printf("  -> self: %s\n", self->GetFullName().c_str());
-            printf("              -> %p\n", self->VfTableObject.Ptr);
-            printf("  -> params %p\n", static_cast<void*>(&paramsPtr));
-            if (fn && paramsPtr && fn->ParmsSize != 0) {
-                const auto base = static_cast<uint8_t*>(paramsPtr);
+        //if (fn && fn->GetFullName().find("PopUpOnlyNotification") != std::string::npos) {
+        //    printf("[PE] (post): %s\n", fn->GetFullName().c_str());
+        //    printf("  -> fn:    %s\n", fn->GetFullName().c_str());
+        //    printf("              -> %p\n", fn->VfTableObject.Ptr);
+        //    printf("  -> self: %s\n", self->GetFullName().c_str());
+        //    printf("              -> %p\n", self->VfTableObject.Ptr);
+        //    printf("  -> params %p\n", static_cast<void*>(&paramsPtr));
+        //    if (fn && paramsPtr && fn->ParmsSize != 0) {
+        //        const auto base = static_cast<uint8_t*>(paramsPtr);
 
-                for (UProperty* prop = static_cast<UProperty*>(fn->Children);
-                     prop;
-                     prop = static_cast<UProperty*>(prop->Next))
-                {
-                    if (!(prop->PropertyFlags & CPF_Parm)) { continue; }
+        //        for (UProperty* prop = static_cast<UProperty*>(fn->Children);
+        //             prop;
+        //             prop = static_cast<UProperty*>(prop->Next))
+        //        {
+        //            if (!(prop->PropertyFlags & CPF_Parm)) { continue; }
 
-                    for (int i = 0; i < prop->ArrayDim; ++i) {
-                        printf("i: %i\n", i);
-                        void* valuePtr = base + prop->Offset + i * prop->ElementSize;
-                        ResolvedValue out;
-                        auto propEntry = UEModel::assignClass(prop);
-                        printf(" %s\n", propEntry->getCanonicalTypeStr().c_str());
-                        propEntry->resolveInto(out, valuePtr);
-                        Printer::debugPrint(out);
-                    }
-                }
-            }
-        }
+        //            for (int i = 0; i < prop->ArrayDim; ++i) {
+        //                printf("i: %i\n", i);
+        //                void* valuePtr = base + prop->Offset + i * prop->ElementSize;
+        //                ResolvedValue out;
+        //                auto propEntry = UEModel::assignClass(prop);
+        //                printf(" %s\n", propEntry->getCanonicalTypeStr().c_str());
+        //                propEntry->resolveInto(out, valuePtr);
+        //                Printer::debugPrint(out);
+        //            }
+        //        }
+        //    }
+        //}
     } else {
         // dispatcher is MIA fallback
         reinterpret_cast<tProcessEvent>(bakkesTrampolineFn_)(self, fn, paramsPtr, resultPtr);
