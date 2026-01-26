@@ -4,6 +4,7 @@
 #include "ILogger.h"
 #include "IModule.h"
 #include "SDK.h"
+using r = Runtime;
 
 class IRuntime : public IModule {
     AIM_INJECTABLE(AIMRuntime)
@@ -26,72 +27,72 @@ class IRuntime : public IModule {
             return false;
         }
 
-        Runtime::setFNameEntries(reinterpret_cast<TArray<FNameEntry*>*>(fNameEntriesAddr));
-        Runtime::setUObjects(reinterpret_cast<TArray<UObject*>*>(uObjectsAddr));
+        r::fname::game_pool::set(reinterpret_cast<TArray<FNameEntry*>*>(fNameEntriesAddr));
+        r::uobject::game_pool::set(reinterpret_cast<TArray<UObject*>*>(uObjectsAddr));
 
-        log_->debug("engine valid: {}", std::to_string(Runtime::areUObjectsPopulated() && Runtime::areFNameEntriesValid()));
+        log_->debug("engine valid: {}", std::to_string(r::uobject::game_pool::hasUObjects() && r::fname::game_pool::isValid()));
 
         //log_->info("FNameEntry::Flags     = 0x" + int_to_hex(offsetof(FNameEntry, Flags)));
         //log_->info("FNameEntry::Index     = 0x" + int_to_hex(offsetof(FNameEntry, Index)));
         //log_->info("FNameEntry::Name      = 0x" + int_to_hex(offsetof(FNameEntry, Name)));
         //log_->info("FNameEntry sizeof     = 0x" + int_to_hex(sizeof(FNameEntry)));
 
-        return (Runtime::areUObjectsPopulated() && Runtime::areFNameEntriesValid());
+        return (r::uobject::game_pool::isPopulated() && r::fname::game_pool::isValid());
     }
 
-    static auto hasUObjects() -> bool { return Runtime::hasUObjects(); }
-    static auto hasFNames() -> bool { return Runtime::hasFNames(); }
+    static auto hasUObjects() -> bool { return r::uobject::game_pool::hasUObjects(); }
+    static auto hasFNames() -> bool { return r::fname::game_pool::isValid(); }
 
     auto getUObjectsPtr() -> TArray<UObject*>* {
-        return Runtime::getUObjectsPtr();
+        return r::uobject::game_pool::ptr();
     }
 
     auto getUObjects() -> TArray<UObject*> {
-        return Runtime::getUObjects();
+        return r::uobject::game_pool::ref();
     }
 
     auto findClass(const std::string& classFullName) -> UClass* {
-        return Runtime::findClass(classFullName);
+        return r::uclass::find(classFullName);
     }
 
     auto findFunction(const std::string& functionFullName) -> UFunction* {
-        return Runtime::findFunction(functionFullName);
+        return r::ufunction::find(functionFullName);
     }
 
     auto areFNameEntriesValid() -> bool {
-        return Runtime::areFNameEntriesValid();
+        return r::fname::game_pool::isValid();
     }
 
     auto areUObjectsPopulated() -> bool {
-        return Runtime::areUObjectsPopulated();
+        return r::uobject::game_pool::isPopulated();
     }
 
     auto getFNameEntries() -> TArray<FNameEntry*>& {
-        return Runtime::getFNameEntries();
+        return r::fname::game_pool::ref();
     }
 
     auto getFNameEntriesPtr() -> TArray<FNameEntry*>* {
-        return Runtime::getFNameEntriesPtr();
+        return r::fname::game_pool::ptr();
     }
 
-    auto getFNameEntry(int32_t index) -> FNameEntry* {
-        return Runtime::getFNameEntry(index);
+    auto getFNameEntry(const int32_t index) ->  std::optional<std::reference_wrapper<const FName>> {
+        return r::fname::game_pool::find(index);
     }
 
-    auto getFNameEntryName(int32_t index) -> std::string {
-        return Runtime::getFNameEntryName(index);
-    }
+    //auto getFNameEntryName(int32_t index) -> std::string {
+    //    return Runtime::getFNameEntryName(index);
+    //}
 
     auto findPackages() -> std::vector<UObject*> {
-        return Runtime::findPackages();
+        return r::packages::findAll();
     }
 
     auto getRawObjects() -> const std::vector<UObject*>& {
-        return Runtime::getRawObjects();
+        return r::uobject::cache::rawObjects();
     }
 
     auto getUObjectsCache() -> std::vector<UObject*>& {
-        return Runtime::getObjectCache();
+        return r::uobject::cache::ref();
     }
 
     //void shutdown() {

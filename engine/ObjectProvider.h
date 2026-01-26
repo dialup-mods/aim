@@ -77,7 +77,7 @@ class ObjectProvider : public IObjectProvider {
             if (addr < 0x10000 || addr > 0xFFFFFFFFFF) { continue; } // skip obviously bad memory
             if (!obj->Class) { continue; }
             if (!obj->IsA(T::StaticClass())) { continue; }
-            if (r::uobject_utils::hasAnyFlags(static_cast<EObjectFlags>(RF_BeginDestroyed || RF_FinishDestroyed || RF_DefaultOrArchetypeFlags))) { continue; }
+            if (r::uobject_utils::hasAnyFlags(obj, static_cast<EObjectFlags>(RF_BeginDestroyed || RF_FinishDestroyed || RF_DefaultOrArchetypeFlags))) { continue; }
 
             // fixme special checks for UGFxData_Chat_TA
             if constexpr (std::is_same_v<T, UGFxData_Chat_TA>) {
