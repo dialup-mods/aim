@@ -221,6 +221,7 @@ public:
             populate();
             checkGetUObjectsPtr();
             checkGetFNameEntriesPtr();
+            testFName();
             testObjectIteration();
             testClassLookup();
             testFindFunction();
@@ -232,7 +233,6 @@ public:
 //            //testDatastoreDiscovery();
 //
 //            //testProcessEventDirect();
-//            testFName();
 //            //testUObjectUtil();
 //
 //            // object provider tests
@@ -388,17 +388,6 @@ public:
                 printf("  -> pass, returned:   %i\n", func->NumParms);
             } else {
                 printf("  -> Fail. Expected: 6, Returned:   %i\n", func->NumParms);
-            }
-        }
-
-        {
-            auto* func = r::ufunction::find("Function Core.Object.ProcessEvent");
-            printf(" - ProcessEvent: %s\n", func ? "found" : "FAIL - NOT FOUND");
-
-            if (func) {
-                printf("   Address: %p\n", func);
-                printf("   Flags: 0x%llu\n", func->FunctionFlags);
-                printf("   Func pointer: %p\n", func->Func.Ptr);
             }
         }
     }
