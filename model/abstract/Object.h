@@ -188,39 +188,14 @@ public:
         return getName();
     }
 
-    auto
-    getType() const -> EClassTypes {
-        if (type_ != EClassTypes::Unresolved) {
-            return type_;
+    auto classify(const UObject* obj) -> EClassTypes {
+        for (auto* cls = obj->Class; cls; cls = static_cast<UClass*>(cls->SuperField)) {
+            auto name = r::uclass::name(cls); // string_view
+            if (auto it = kClassKind.find(name); it != kClassKind.end()) {
+                return it->second;
+            }
         }
-
-        // fixme just switch on the flags
-        if (getObject()->IsA<UByteProperty>())        type_ = EClassTypes::UByteProperty;
-        else if (getObject()->IsA<UBoolProperty>())   type_ = EClassTypes::UBoolProperty;
-        else if (getObject()->IsA<UIntProperty>())    type_ = EClassTypes::UIntProperty;
-        else if (getObject()->IsA<UFloatProperty>())  type_ = EClassTypes::UFloatProperty;
-        else if (getObject()->IsA<UStrProperty>())    type_ = EClassTypes::UStrProperty;
-        else if (getObject()->IsA<UNameProperty>())   type_ = EClassTypes::UNameProperty;
-        else if (getObject()->IsA<UQWordProperty>())  type_ = EClassTypes::UQWordProperty;
-
-        else if (getObject()->IsA<UObjectProperty>())    type_ = EClassTypes::UObjectProperty;
-        else if (getObject()->IsA<UClassProperty>())     type_ = EClassTypes::UClassProperty;
-        else if (getObject()->IsA<UInterfaceProperty>()) type_ = EClassTypes::UInterfaceProperty;
-        else if (getObject()->IsA<UStructProperty>())    type_ = EClassTypes::UStructProperty;
-        else if (getObject()->IsA<UArrayProperty>())     type_ = EClassTypes::UArrayProperty;
-        else if (getObject()->IsA<UMapProperty>())       type_ = EClassTypes::UMapProperty;
-        else if (getObject()->IsA<UDelegateProperty>())  type_ = EClassTypes::UDelegateProperty;
-
-        else if (getObject()->IsA<UFunction>())      type_ = EClassTypes::UFunction;
-        else if (getObject()->IsA<UConst>())         type_ = EClassTypes::UConst;
-        else if (getObject()->IsA<UEnum>())          type_ = EClassTypes::UEnum;
-        else if (getObject()->IsA<UScriptStruct>())  type_ = EClassTypes::UScriptStruct;
-        else if (getObject()->IsA<UClass>())         type_ = EClassTypes::UClass;
-        else if (getObject()->IsA<UStruct>())        type_ = EClassTypes::UStruct;
-
-        else type_ = EClassTypes::Unknown;
-
-        return type_;
+        return EClassTypes::Unknown;
     }
 
     auto hasChildren() const -> bool {
@@ -358,7 +333,6 @@ public:
         oss << "  Package*: " << getPackage() << "\n";
         oss << "  Package:       \"" << getPackageName() << "\"\n";
         oss << "  SanitizedName: \"" << getSanitizedName() << "\"\n";
-        oss << "  Type: " << ToString(getType()) << "\n";
         oss << "  UObject*: " << getObject() << "\n";
         oss << "}";
 

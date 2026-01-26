@@ -7,6 +7,9 @@
 #include "v1/ILogger.h"
 #include "ObjectProvider.h"
 #include "TaskQueue.h"
+#include "Runtime.h"
+
+using r = Runtime;
 
 Dispatch::~Dispatch() {
     log_->info("[Dispatch] unloaded");
@@ -19,7 +22,7 @@ int32_t Dispatch::getNextID() {
 void Dispatch::registerTask(std::shared_ptr<TaskDefinition>& task) {
     log_->debug("[Dispatch] registering task: {}", TaskBuilder::describe(*task));
 
-    auto fn = objectProvider_->findStaticFunction(task->functionName);
+    auto fn = r::ufunction::find(task->functionName);
     if (!fn) {
         log_->error("[Dispatch] Failed to find function: {}", task->functionName);
         return;

@@ -37,6 +37,7 @@
 #include "Toaster.h"
 
 // clang-format off
+using r = Runtime;
 
 // needed for detoured functions
 Resolver* AIM::staticResolver_;
@@ -87,10 +88,10 @@ bool AIM::populateRuntime() {
     }
 
     Runtime::create();
-    Runtime::setUObjects(reinterpret_cast<TArray<UObject*>*>(gObjAddr));
-    Runtime::setFNameEntries(reinterpret_cast<TArray<FNameEntry*>*>(gNameAddr));
+    r::uobject::game_pool::set(reinterpret_cast<TArray<UObject*>*>(gObjAddr));
+    r::fname::game_pool::set(reinterpret_cast<TArray<FNameEntry*>*>(gNameAddr));
 
-    bool isEngineValid = Runtime::areUObjectsPopulated() && Runtime::areFNameEntriesValid();
+    bool isEngineValid = r::uobject::game_pool::isPopulated() && r::uobject::game_pool::hasUObjects();
     log->debug("engine valid: {}", isEngineValid);
     if (!isEngineValid) {
         log->error("Failed to start Runtime.");
@@ -361,8 +362,6 @@ AIM::startup() {
     if (!loadObjectProvider()) {
         return;
     }
-
-    printf("\n\n\n\n%p\n\n\n\n\n\n\n", UObject::StaticClass()->VfTableObject.Ptr);
 
     unrealReadyGate->onReady([this, fence, log] {
         log->debug("unreal ready, calling detours\n");
