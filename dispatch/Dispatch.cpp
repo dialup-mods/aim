@@ -95,6 +95,7 @@ void Dispatch::clearTasks() {
     preTasks_.clear();
     postTasks_.clear();
     gatedTasks_.clear();
+    executeTasks_.clear();
 
     // fixme check that tasks are actually drained
 //    shutdownGate_->setReady();
@@ -146,12 +147,16 @@ bool Dispatch::runTasksForPhase(
     return shouldBlock;
 }
 
-bool Dispatch::dispatchPre(int fnIndex, InvocationContext& ctx) {
+bool Dispatch::dispatchPre(const int fnIndex, InvocationContext& ctx) {
     return runTasksForPhase(preTasks_, fnIndex, ctx, true);
 }
 
-void Dispatch::dispatchPost(int fnIndex, InvocationContext& ctx) {
+void Dispatch::dispatchPost(const int fnIndex, InvocationContext& ctx) {
     runTasksForPhase(postTasks_, fnIndex, ctx, false);
+}
+
+void Dispatch::dispatchUnconditionally(InvocationContext& ctx) {
+//    runTasksForPhase(executeTasks_, ctx, false);
 }
 
 auto Dispatch::bindContext(std::function<void(InvocationContext&)> f, InvocationContext& ctx) {
@@ -160,7 +165,7 @@ auto Dispatch::bindContext(std::function<void(InvocationContext&)> f, Invocation
     };
 }
 
-void Dispatch::dispatchGated(int fnIndex, InvocationContext& context) {
+void Dispatch::dispatchGated(const int fnIndex, InvocationContext& context) {
     // these run next tick, we slap them in the front so they don't run immediately after being queued
     taskQueue_->processFunctions();
     

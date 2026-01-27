@@ -111,8 +111,51 @@ void forEachValidLiveObject(Predicate&& pred) {
     }
 }
 
+template<typename T>
+T* getStaticClassOf() {
+    if (!std::is_base_of_v<UObject, T>) { return nullptr; }
 
+    const auto& objects = r::uobject::game_pool::ref();
+    printf("num objects: %i\n", objects.size());
+    printf("T className: %s\n", T::className);
 
+    for (size_t i = objects.size(); i-- > 0; ) {
+        UObject* uObject = r::uobject::game_pool::ref().at(i);
+        if (!uObject) { continue; }
+        if (uObject->ObjectFlags & RF_DefaultOrArchetypeFlags) { continue; }
+        auto objName = r::uobject_utils::getFullName(uObject);
+        if (std::strcmp(
+                objName.c_str(),
+                T::className
+            ) == 0) {
+            printf("found at index: %llu/%i\n", i, r::uobject::game_pool::ref().size());
+            return static_cast<T*>(uObject);
+            }
+    }
+
+    return nullptr;
+}
+
+template<typename T>
+T* getInstanceOf() {
+    if (!std::is_base_of_v<UObject, T>) { return nullptr; }
+
+    const auto& objects = r::uobject::game_pool::ref();
+    printf("num objects: %i\n", objects.size());
+    printf("T className: %s\n", T::className);
+
+    for (size_t i = objects.size(); i-- > 0; ) {
+        UObject* uObject = r::uobject::game_pool::ref().at(i);
+        if (!uObject) { continue; }
+        if (uObject->ObjectFlags & RF_DefaultOrArchetypeFlags) { continue; }
+        auto objName = r::uobject_utils::getFullName(uObject);
+        if (objName.find("NotificationManager_TA") != std::string::npos) {
+            printf("->name: %s\n", objName.c_str());
+        }
+    }
+
+    return nullptr;
+}
 
 
 
@@ -225,6 +268,7 @@ public:
             testObjectIteration();
             testClassLookup();
             testFindFunction();
+            testUObjectUtil();
             //testReturnValue();
 //
 //            //testGetInstanceOf();
@@ -233,10 +277,9 @@ public:
 //            //testDatastoreDiscovery();
 //
 //            //testProcessEventDirect();
-//            //testUObjectUtil();
 //
 //            // object provider tests
-//            //testNotification();
+            //testNotification();
         } __except (EXCEPTION_EXECUTE_HANDLER) {
             printf("big test exception\n");
         }
@@ -518,7 +561,15 @@ public:
     }
 
     void testUObjectUtil() {
-        //printf("[TEST] ObjectUtil\n");
+        printf("[TEST] ObjectUtil\n");
+
+        auto* mgr = getInstanceOf<UNotificationManager_TA>();
+        if (!mgr) {
+            printf("  fail - no object\n");
+            return;
+        }
+        auto name = r::uobject_utils::getName(mgr);
+        printf("  returned name: %s\n", name.c_str());
 
         //auto name = r::fname::game_pool::getString(L"NotificationManager_TA");
         //printf("%s\n", name.ToString().c_str());

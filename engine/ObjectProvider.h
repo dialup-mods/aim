@@ -29,6 +29,31 @@ class ObjectProvider : public IObjectProvider {
     ObjectProvider() = default;
     ~ObjectProvider();
 
+    template<typename T>
+    T* getInstanceOf() {
+        if (!std::is_base_of_v<UObject, T>) { return nullptr; }
+
+        const auto& objects = r::uobject::game_pool::ref();
+        printf("num objects: %i\n", objects.size());
+        printf("T className: %s\n", T::className);
+
+        for (size_t i = objects.size(); i-- > 0; ) {
+            UObject* uObject = r::uobject::game_pool::ref().at(i);
+            if (!uObject) { continue; }
+            if (uObject->ObjectFlags & RF_DefaultOrArchetypeFlags) { continue; }
+            auto objName = r::uobject_utils::getFullName(uObject);
+            if (std::strcmp(
+                    objName.c_str(),
+                    T::className
+                ) == 0) {
+                printf("found at index: %llu/%i\n", i, r::uobject::game_pool::ref().size());
+                return static_cast<T*>(uObject);
+                }
+        }
+
+        return nullptr;
+    }
+
     //
     // ProfileQuickChatSave_TAs
     // if there are multiple instances,

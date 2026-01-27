@@ -60,7 +60,7 @@ public:
 
     bool dispatchPre(int fnIndex, InvocationContext& ctx);
     void dispatchPost(int fnIndex, InvocationContext& ctx);
-    void dispatchExecute(InvocationContext& ctx);
+    void dispatchUnconditionally(InvocationContext& ctx);
     void evaluateTask(std::shared_ptr<TaskDefinition>& taskPtr, InvocationContext& ctx);
     auto bindContext(std::function<void(InvocationContext&)> f, InvocationContext& ctx);
     void executeWithContext(std::function<void(InvocationContext&)> f, InvocationContext& ctx);

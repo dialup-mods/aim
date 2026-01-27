@@ -2,6 +2,7 @@ cmake_minimum_required(VERSION 4.0)
 
 set(DIALUP_INSTALL_DIR "$ENV{LOCALAPPDATA}/DialUp")
 include("${DIALUP_INSTALL_DIR}/build-tools/PreProject.cmake")
+include("${DIALUP_INSTALL_DIR}/build-tools/GameBinaryDir.cmake")
 
 project(AIM VERSION 1.0 LANGUAGES CXX)
 
@@ -63,6 +64,15 @@ dialup_setup_module(${PROJECT_NAME}
     DESTINATION "plugin/${PROJECT_NAME}"
 )
 
+install(FILES
+	${CMAKE_CURRENT_SOURCE_DIR}/build/AIM.dll
+	DESTINATION ${GAME_BINARY_PATH})
+
+install(FILES
+	${CMAKE_CURRENT_SOURCE_DIR}/build/AIM.pdb
+	DESTINATION ${GAME_BINARY_PATH})
+
+
 find_package(DialUp-SDK REQUIRED PATHS ${DIALUP_INSTALL_DIR}/sdk-plugin)
 target_link_libraries(${PROJECT_NAME} PRIVATE DialUp-SDK::DialUp-SDK)
 
@@ -83,5 +93,4 @@ target_link_libraries(${PROJECT_NAME} PRIVATE DialUp-SDK::DialUp-SDK)
 #        COMMAND ${CMAKE_COMMAND} -E echo "Post-build copy fired (dll and config)"
 #        COMMAND ${CMAKE_COMMAND} -E echo ${GAME_BINARY_PATH}
 #)
-
 target_compile_definitions(${PROJECT_NAME} PRIVATE AIM_BUILD)

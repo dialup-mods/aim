@@ -11,6 +11,9 @@ class AIM : public PluginBase<AIM> {
     ~AIM() override = default;
     auto getName() const -> const char* override;
     void startup() override;
+
+    void testToast();
+
     [[nodiscard]] auto registerPublicInterfaces() const -> std::vector<PublicInterface> override;
     void shutdown() override;
 

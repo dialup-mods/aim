@@ -352,6 +352,9 @@ void __fastcall ProcessEvent::handleFunction(UObject* self, UFunction* fn, void*
         // conditional hooks
         dispatch->dispatchGated(fn->ObjectInternalInteger, context);
 
+        // runs for every tick
+        //dispatch->dispatchUnconditionally(context);
+
         //if (fn && fn->GetFullName().find("PopUpOnlyNotification") != std::string::npos) {
         //    printf("[PE] (post): %s\n", fn->GetFullName().c_str());
         //    printf("  -> fn:    %s\n", fn->GetFullName().c_str());

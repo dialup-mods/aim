@@ -20,10 +20,6 @@ build: check-shell
 
 install: check-shell
 	$(call run_with_vcvars, cmake --install build --config RelWithDebInfo)
-	@bash -lc '\
-		cp -v "$(INSTALL_DIR)/$(DLL)" "$(ROAMINGAPPDATA)/bakkesmod/plugins/TestPlugin.dll"; \
-		cp -v "$(INSTALL_DIR)/$(PDB)" "$(ROAMINGAPPDATA)/bakkesmod/plugins/TestPlugin.pdb"; \
-		'
 
 clean: check-shell
 	@rm -rf build

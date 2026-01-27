@@ -92,11 +92,11 @@ bool AIM::populateRuntime() {
     r::fname::game_pool::set(reinterpret_cast<TArray<FNameEntry*>*>(gNameAddr));
 
     bool isEngineValid = r::uobject::game_pool::isPopulated() && r::uobject::game_pool::hasUObjects();
-    log->debug("engine valid: {}", isEngineValid);
     if (!isEngineValid) {
         log->error("Failed to start Runtime.");
         return false;
     }
+    log->debug("Engine valid: {}", isEngineValid);
 
     return true;
 }
@@ -389,6 +389,35 @@ AIM::startup() {
 
 //    std::shared_ptr<IObjectProvider> iface = resolve<ObjectProvider>();
 //    registerInstance<IObjectProvider>(iface);
+
+
+    testToast();
+}
+
+void AIM::testToast() {
+    printf("inside test toast\n");
+    auto processEvent = resolve<ProcessEvent>();
+    auto objectProvider = resolve<ObjectProvider>();
+
+    processEvent->registerTask(TaskBuilder()
+            .name("Toast")
+            .functionName("Function Engine.Interaction.Tick")
+            .phase(HookPhase::Post)
+            .callback([objectProvider](InvocationContext& ctx) {
+                auto* mgr = objectProvider->getInstanceOf<UNotificationManager_TA>();
+                auto name = r::uobject_utils::getFullName(mgr);
+                printf("  found: %s\n", name.c_str());
+                printf("  toast callback\n");
+                //auto* toaster = mgr->PopUpOnlyNotification(UGenericNotification_TA::StaticClass());
+                //auto foo = r::uobject_utils::getFullName(toaster);
+                //printf("  toast: %s\n", foo.c_str());
+                //toaster->SetTitle(L'Foo');
+                //toaster->SetBody(L'Body');
+                //toaster->PopUpDuration = static_cast<float>(5);
+
+            })
+            .once()
+            .build());
 }
 
 auto AIM::registerPublicInterfaces() const -> std::vector<PublicInterface> {
