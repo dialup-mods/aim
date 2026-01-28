@@ -27,6 +27,7 @@ include_directories(
 
 set(SOURCES
     main.cpp
+    ../engine/EngineLocator.cpp
 )
 
 #add_executable(AllTests

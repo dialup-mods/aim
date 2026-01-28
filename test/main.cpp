@@ -3,6 +3,7 @@
 
 #include "TestConsole.h"
 #include "test_Runtime.h"
+#include "test_ObjectProvider.h"
 
 uintptr_t gDllStart = 0;
 uintptr_t gDllEnd   = 0;
@@ -50,8 +51,14 @@ Worker(const LPVOID lpParam) {
         test::terminal::tryHookConsoleIO();
         printf("Test Worker started.\n");
 
-        RuntimeTest test;
-        test.run();
+
+        // NOTE: this test must be run first to populate runtime
+        RuntimeTest rtTest;
+        rtTest.run();
+
+        ObjectProviderTest objTest;
+        objTest.run();
+
     }
     removeCrashShield();
 

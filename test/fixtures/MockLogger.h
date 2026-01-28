@@ -7,26 +7,16 @@
 class MockLogger : public ILogger {
     AIM_INJECTABLE(MockLogger)
 
-public:
+    ~MockLogger() = default;
     MockLogger() = default;
 
-    void setLogLevel(LogLevel level) override {
-        currentLevel_ = level;
-    }
+    void setLogLevel(LogLevel level) override { currentLevel_ = level; }
+    void addSink(const std::shared_ptr<LogSink>&) override {}
+    void setLogPath(const std::string&) override {}
+    auto toString(LogCategory category) -> std::string override { return "category"; }
+    auto toString(LogLevel level) -> std::string override { return "level"; }
 
-    void addSink(const std::shared_ptr<LogSink>&) override {
-        // No-op for test logger
-    }
-
-    void setLogPath(const std::string&) override {
-        // No-op for test logger
-    }
-
-    auto logLevelToString(LogLevel level) -> std::string override {
-        return toString(level);
-    }
-
-    void log(std::string_view message, LogCategory category, LogLevel level) override {
+    void log(std::string_view message, LogCategory category, LogLevel level) {
         if (level < currentLevel_) return;
 
         std::string formattedMessage = fmt::format("[{:>5}] [{}] {}", toString(level), toString(category), message);
@@ -36,6 +26,9 @@ public:
         std::cout.flush();
     }
 
+    void printRaw(std::string_view sv, bool newline, bool flush) override {};
+
 private:
     LogLevel currentLevel_ = LogLevel::LOG_DEBUG;
+    void logImpl(std::string_view message, LogLevel level) override {};
 };
