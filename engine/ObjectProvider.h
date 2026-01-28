@@ -25,31 +25,46 @@ class ObjectProvider : public IObjectProvider {
     int32_t iterateLimit_ = 100;
 
     ObjectProvider() = default;
-    ~ObjectProvider();
+    ~ObjectProvider() = default;
+
+    // fixme
+    // replaced with adapter-based lookup + cache.
 
     template<typename T>
-    T* getInstanceOf() {
+    auto getInstanceOf() -> T* {
         if (!std::is_base_of_v<UObject, T>) { return nullptr; }
 
-        const auto& objects = r::uobject::game_pool::ref();
-        printf("num objects: %i\n", objects.size());
-        printf("T className: %s\n", T::className);
+        const UClass* wantedClass = r::uclass::find(T::className);
 
-        for (size_t i = objects.size(); i-- > 0; ) {
-            UObject* uObject = r::uobject::game_pool::ref().at(i);
+        const auto& objects = r::uobject::game_pool::ref();
+        for (int i = objects.size(); i-- > 0; ) {
+            UObject* uObject = objects.at(i);
             if (!uObject) { continue; }
             if (uObject->ObjectFlags & RF_DefaultOrArchetypeFlags) { continue; }
-            auto objName = r::uobject_utils::getFullName(uObject);
-            if (std::strcmp(
-                    objName.c_str(),
-                    T::className
-                ) == 0) {
-                printf("found at index: %llu/%i\n", i, r::uobject::game_pool::ref().size());
+            if (r::types::isa(uObject->Class, wantedClass)) {
                 return static_cast<T*>(uObject);
-                }
+            }
         }
-
         return nullptr;
+    }
+
+    template<typename T>
+    auto getAllInstancesOf() -> std::vector<T*> {
+        std::vector<T*> matchingObjs;
+        if (!std::is_base_of_v<UObject, T>) { return matchingObjs; }
+
+        const UClass* wantedClass = r::uclass::find(T::className);
+
+        const auto& objects = r::uobject::game_pool::ref();
+        for (int i = objects.size(); i-- > 0; ) {
+            UObject* uObject = objects.at(i);
+            if (!uObject) { continue; }
+            if (uObject->ObjectFlags & RF_DefaultOrArchetypeFlags) { continue; }
+            if (r::types::isa(uObject->Class, wantedClass)) {
+                matchingObjs.emplace_back(static_cast<T*>(uObject));
+            }
+        }
+        return matchingObjs;
     }
 
     //
@@ -71,89 +86,89 @@ class ObjectProvider : public IObjectProvider {
     // forEachObject<UFunction>([](UFunction* fn) {
     //     printf("Function: %s", *fn->GetFullName());
     // });
-    template<typename T, typename Predicate>
-    void forEachObject(Predicate&& pred) {
-        auto& objects = r::uobject::game_pool::ref();
+//    template<typename T, typename Predicate>
+//    void forEachObject(Predicate&& pred) {
+//        auto& objects = r::uobject::game_pool::ref();
+//
+//        for (int i = objects.size(); i > 0; i--) {
+//            UObject* obj = objects.at(i);
+//
+//            if (!obj || !obj->Class || !obj->IsA(T::StaticClass())) {
+//                continue;
+//            }
+//
+//            pred(static_cast<T*>(obj));
+//        }
+//    }
 
-        for (int i = objects.size(); i > 0; i--) {
-            UObject* obj = objects.at(i);
+//    template<typename T, typename Predicate>
+//    void forEachValidLiveObject(Predicate&& pred) {
+//        static_assert(std::is_base_of_v<UObject, T>, "T must be a UObject-derived type");
+//
+//        auto& objects = r::uobject::game_pool::ref();
+//
+//        for (int i = objects.size(); i > 0; i--) {
+//            UObject* obj = objects.at(i);
+//            if (!obj) { continue; }
+//
+//            uintptr_t addr = reinterpret_cast<uintptr_t>(obj);
+//            if (addr < 0x10000 || addr > 0xFFFFFFFFFF) { continue; } // skip obviously bad memory
+//            if (!obj->Class) { continue; }
+//            if (!obj->IsA(T::StaticClass())) { continue; }
+//            if (r::uobject_utils::hasAnyFlags(obj, static_cast<EObjectFlags>(RF_BeginDestroyed || RF_FinishDestroyed || RF_DefaultOrArchetypeFlags))) { continue; }
+//
+//            // fixme special checks for UGFxData_Chat_TA
+//            if constexpr (std::is_same_v<T, UGFxData_Chat_TA>) {
+//                T* chat = static_cast<T*>(obj);
+//                if (!chat->Shell || !chat->Shell->DataStore)
+//                    continue;
+//            }
+//
+//            if (!pred(static_cast<T*>(obj))) {
+//                break;
+//            }
+//        }
+//    }
 
-            if (!obj || !obj->Class || !obj->IsA(T::StaticClass())) {
-                continue;
-            }
+//    template<typename T>
+//    T* findLiveInstanceOf() {
+//        return findFirstWhere<T>([](T*) { return true; });
+//    }
+//
+//    template<typename T>
+//    T* findObjectByName(const std::string& name, bool strict = false) {
+//        return findFirstWhere<T>([&](T* candidate) {
+//            const std::string& fullName = candidate->GetFullName();
+//            return strict ? (fullName == name) : (fullName.find(name) != std::string::npos);
+//        });
+//    }
 
-            pred(static_cast<T*>(obj));
-        }
-    }
+//    template<typename T, typename Predicate>
+//    T* findFirstWhere(Predicate&& predicate) {
+//        T* result = nullptr;
+//
+//        forEachValidLiveObject<T>([&](T* candidate) {
+//            if (predicate(candidate)) {
+//                result = candidate;
+//                return false; // stop iteration
+//            }
+//        });
+//
+//        return result;
+//    }
 
-    template<typename T, typename Predicate>
-    void forEachValidLiveObject(Predicate&& pred) {
-        static_assert(std::is_base_of_v<UObject, T>, "T must be a UObject-derived type");
-
-        auto& objects = r::uobject::game_pool::ref();
-
-        for (int i = objects.size(); i > 0; i--) {
-            UObject* obj = objects.at(i);
-            if (!obj) { continue; }
-
-            uintptr_t addr = reinterpret_cast<uintptr_t>(obj);
-            if (addr < 0x10000 || addr > 0xFFFFFFFFFF) { continue; } // skip obviously bad memory
-            if (!obj->Class) { continue; }
-            if (!obj->IsA(T::StaticClass())) { continue; }
-            if (r::uobject_utils::hasAnyFlags(obj, static_cast<EObjectFlags>(RF_BeginDestroyed || RF_FinishDestroyed || RF_DefaultOrArchetypeFlags))) { continue; }
-
-            // fixme special checks for UGFxData_Chat_TA
-            if constexpr (std::is_same_v<T, UGFxData_Chat_TA>) {
-                T* chat = static_cast<T*>(obj);
-                if (!chat->Shell || !chat->Shell->DataStore)
-                    continue;
-            }
-
-            if (!pred(static_cast<T*>(obj))) {
-                break;
-            }
-        }
-    }
-
-    template<typename T>
-    T* findLiveInstanceOf() {
-        return findFirstWhere<T>([](T*) { return true; });
-    }
-
-    template<typename T>
-    T* findObjectByName(const std::string& name, bool strict = false) {
-        return findFirstWhere<T>([&](T* candidate) {
-            const std::string& fullName = candidate->GetFullName();
-            return strict ? (fullName == name) : (fullName.find(name) != std::string::npos);
-        });
-    }
-
-    template<typename T, typename Predicate>
-    T* findFirstWhere(Predicate&& predicate) {
-        T* result = nullptr;
-
-        forEachValidLiveObject<T>([&](T* candidate) {
-            if (predicate(candidate)) {
-                result = candidate;
-                return false; // stop iteration
-            }
-        });
-
-        return result;
-    }
-
-    template<typename T, typename Predicate>
-    std::vector<T*> findAllWhere(Predicate&& predicate) {
-        std::vector<T*> results;
-
-        forEachValidLiveObject<T>([&](T* candidate) {
-            if (predicate(candidate)) {
-                results.push_back(candidate);
-            }
-        });
-
-        return results;
-    }
+//    template<typename T, typename Predicate>
+//    std::vector<T*> findAllWhere(Predicate&& predicate) {
+//        std::vector<T*> results;
+//
+//        forEachValidLiveObject<T>([&](T* candidate) {
+//            if (predicate(candidate)) {
+//                results.push_back(candidate);
+//            }
+//        });
+//
+//        return results;
+//    }
 
     // Fast path - cache only
     //template<typename T, typename Predicate>
@@ -194,31 +209,31 @@ class ObjectProvider : public IObjectProvider {
     //    return nullptr;
     //}
 
-    template<typename T>
-    auto get() -> T* {
-        log_->debug("get() called");
-        log_->debug("get() Requested type: {}", typeid(T).name());
-
-        // Use type_index as the key (more efficient than type_info)
-        std::type_index typeIdx(typeid(T));
-
-        // Check if we already have an instance in the cache
-        auto it = instanceCache_.find(typeIdx);
-        if (it != instanceCache_.end()) {
-            return static_cast<T*>(it->second);
-        }
-
-        // Not in cache, get the instance
-        log_->debug("not in cache");
-        T* instance = getInstanceOf<T>();
-
-        // Store in cache if found
-        if (instance) {
-            instanceCache_[typeIdx] = instance;
-        }
-
-        return instance;
-    }
+//    template<typename T>
+//    auto get() -> T* {
+//        log_->debug("get() called");
+//        log_->debug("get() Requested type: {}", typeid(T).name());
+//
+//        // Use type_index as the key (more efficient than type_info)
+//        std::type_index typeIdx(typeid(T));
+//
+//        // Check if we already have an instance in the cache
+//        auto it = instanceCache_.find(typeIdx);
+//        if (it != instanceCache_.end()) {
+//            return static_cast<T*>(it->second);
+//        }
+//
+//        // Not in cache, get the instance
+//        log_->debug("not in cache");
+//        T* instance = getInstanceOf<T>();
+//
+//        // Store in cache if found
+//        if (instance) {
+//            instanceCache_[typeIdx] = instance;
+//        }
+//
+//        return instance;
+//    }
 
     //    template<typename T>
     //    auto getInstanceOf() -> T* {
@@ -263,25 +278,25 @@ class ObjectProvider : public IObjectProvider {
     //    return false;
     //}
 
-    template<typename T>
-    auto getAllInstancesOf() -> std::vector<T*> {
-        std::vector<T*> results;
-
-        forEachObject<T>([&results, this](T* candidate) {
-            if (this->isValidLiveInstance(candidate)) {
-                results.push_back(candidate);
-            }
-        });
-
-        return results;
-    }
-
-    template<typename T>
-    std::vector<T*> getAllLiveInstancesOf() {
-        std::vector<T*> results;
-        forEachValidLiveObject<T>([&](T* candidate) { results.push_back(candidate); });
-        return results;
-    }
+//    template<typename T>
+//    auto getAllInstancesOf() -> std::vector<T*> {
+//        std::vector<T*> results;
+//
+//        forEachObject<T>([&results, this](T* candidate) {
+//            if (this->isValidLiveInstance(candidate)) {
+//                results.push_back(candidate);
+//            }
+//        });
+//
+//        return results;
+//    }
+//
+//    template<typename T>
+//    std::vector<T*> getAllLiveInstancesOf() {
+//        std::vector<T*> results;
+//        forEachValidLiveObject<T>([&](T* candidate) { results.push_back(candidate); });
+//        return results;
+//    }
 
     // get all default instances of a class type.
     //template<typename T>
@@ -304,10 +319,10 @@ class ObjectProvider : public IObjectProvider {
     //    return objectInstances;
     //}
 
-    template<typename T>
-    std::vector<T*> findAllObjects(const std::string& name) {
-        return findAllWhere<T>([&](T* candidate) { return candidate->GetFullName().find(name) != std::string::npos; });
-    }
+//    template<typename T>
+//    std::vector<T*> findAllObjects(const std::string& name) {
+//        return findAllWhere<T>([&](T* candidate) { return candidate->GetFullName().find(name) != std::string::npos; });
+//    }
 
     // get the default constructor of a class type. Example: UGameData_TA* gameData = GetDefaultInstanceOf<UGameData_TA>();
     //template<typename T>

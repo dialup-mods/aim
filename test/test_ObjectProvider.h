@@ -9,7 +9,7 @@
 #include "Runtime.h"
 #include "SDK.h"
 
-#include "ObjectProvider.h"
+#include "fixtures/ObjectProviderFixture.h"
 #include "StringUtil.h"
 
 using r = Runtime;
@@ -37,11 +37,15 @@ using r = Runtime;
 
 class ObjectProviderTest {
 public:
+    std::shared_ptr<ObjectProviderFixture> objectProvider = std::make_shared<ObjectProviderFixture>();
+
     void run() {
         printf("\n\nRUNNING OBJECT PROVIDER TESTS\n\n");
 
         __try {
-            testUObjectUtil();
+            testGetInstanceOf();
+            testGetAllInstancesOf();
+            //testUObjectUtil();
             //testReturnValue();
 //
 //            //testGetInstanceOf();
@@ -77,6 +81,31 @@ public:
     //    //auto* ret = params.ReturnValue;
     //    //printf("  -> ret value  %p\n", static_cast<void*>(params.ReturnValue));
     //}
+    void testGetInstanceOf() {
+        printf("\n[TEST] getInstanceOf()\n\n");
+
+        printf("  get instance of UNotificationManager_TA:");
+        auto* mgr = objectProvider->provider.getInstanceOf<UNotificationManager_TA>();
+        if (!mgr) {
+            printf("FAIL\n");
+            return;
+        }
+        printf("  ret: %s\n", r::uobject_utils::getFullName(mgr).c_str());
+    }
+
+    void testGetAllInstancesOf() {
+        printf("\n[TEST] getAllInstancesOf()\n\n");
+
+        printf("  get all instances of :");
+        auto objs = objectProvider->provider.getAllInstancesOf<UGFxData_ShopCatalogue_TA>();
+        if (!objs.size()) {
+            printf("FAIL\n");
+            return;
+        }
+        for (auto obj : objs) {
+            printf("  ret: %s\n", r::uobject_utils::getFullName(obj).c_str());
+        }
+    }
 
     void testDataStores() {
         printf("[TEST] Call Method on Object\n");

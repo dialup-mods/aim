@@ -7,21 +7,20 @@
 
 #include "Runtime.h"
 #include "SDK.h"
-#include "ObjectProvider.h"
 
-#include "fixtures/ObjectProviderFixture.h"
 #include "fixtures/EngineLocatorFixture.h"
+using r = Runtime;
 
 class RuntimeTest {
 public:
     void run() {
-        printf("Initializing Runtime...\n");
+        printf("\n\nRUNNING TESTS\n\n");
+
         HMODULE sdk = GetModuleHandleW(L"DialUp-SDK.dll");
         if (!sdk) {
             MessageBoxA(nullptr, "SDK not loaded", "Test error", MB_OK);
             return;
         }
-        printf("\n\nRUNNING TESTS\n\n");
 
         // create runtime
         r::create();
@@ -41,22 +40,23 @@ public:
         printf("\n\nTESTING COMPLETE\n\n");
     }
 
-    std::shared_ptr<EngineLocatorFixture> engineLocator = std::make_shared<EngineLocatorFixture>();
-
     void populate() {
-        printf("Get addresses\n");
-        printf("gNameEntiresAddr valid: ");
+        printf("\n[TEST] Populate Runtime\n");
+
+        std::shared_ptr<EngineLocatorFixture> engineLocator = std::make_shared<EngineLocatorFixture>();
+
+        printf("    - fNameEntiresAddr valid: ");
         const uintptr_t fNameEntriesAddr = engineLocator->engineLocator.getFNameEntriesAddress();
         if (!fNameEntriesAddr) {
-            printf("fail\n");
+            printf("FAIL\n");
         } else {
             printf("pass\n");
         }
 
-        printf("uObjectsAddr valid: ");
+        printf("    - uObjectsAddr valid: ");
         const uintptr_t uObjectsAddr = engineLocator->engineLocator.getUObjectsAddress();
         if (!uObjectsAddr) {
-            printf("fail\n");
+            printf("FAIL\n");
         } else {
             printf("pass\n");
         }
@@ -64,74 +64,74 @@ public:
         r::fname::game_pool::set(reinterpret_cast<TArray<FNameEntry*>*>(fNameEntriesAddr));
         r::uobject::game_pool::set(reinterpret_cast<TArray<UObject*>*>(uObjectsAddr));
 
-        printf("uObjects are populated: ");
+        printf("    - uObjects are populated: ");
         if (r::uobject::game_pool::isPopulated()) {
             printf("pass\n");
         } else {
-            printf("fail\n");
+            printf("FAIL\n");
         }
 
-        printf("fNameEntries are valid (ish): ");
+        printf("    - fNameEntries are valid (ish): ");
         if (r::fname::game_pool::isValid()) {
             printf("pass\n");
         } else {
-            printf("fail\n");
+            printf("FAIL\n");
         }
     }
 
     void checkGetUObjectsPtr() {
-        printf("Check getUObjectsPtr() is not null: ");
+        printf("    - getUObjectsPtr() is not null: ");
         if (r::uobject::game_pool::ptr() != nullptr) {
             printf("pass\n");
         } else {
-            printf("fail\n");
+            printf("FAIL\n");
         }
     }
 
     void checkGetFNameEntriesPtr() {
-        printf("Check getFNameEntriesPtr() is not null: ");
+        printf("    - getFNameEntriesPtr() is not null: ");
         if (r::fname::game_pool::ptr() != nullptr) {
             printf("pass\n");
         } else {
-            printf("fail\n");
+            printf("FAIL\n");
         }
     }
 
     void testClassLookup() {
-        printf("[TEST] class lookup\n");
+        printf("\n[TEST] class lookup\n");
         {
-            printf(" - Core.Object: ");
+            printf("    - Core.Object: ");
             auto* uObjCls = r::uclass::find("Class Core.Object");
             if (uObjCls && uObjCls->GetFullName() == "Class Core.Object") {
                 printf("pass\n");
             } else {
-                printf("fail\n");
+                printf("FAIL\n");
             }
         }
 
         {
-            printf(" - ProjectX.GFxDataStore: ");
+            printf("    - ProjectX.GFxDataStore: ");
             auto* cls = r::uclass::find("Class ProjectX.GFxDataStore_X");
             if (cls && cls->GetFullName() == "Class ProjectX.GFxDataStore_X") {
                 printf("pass\n");
             } else {
-                printf("fail\n");
+                printf("FAIL\n");
             }
         }
 
         {
-            printf(" - TAGame.GenericNotification_TA: ");
+            printf("    - TAGame.GenericNotification_TA: ");
             auto* cls = r::uclass::find("Class TAGame.GenericNotification_TA");
             if (cls && cls->GetFullName() == "Class TAGame.GenericNotification_TA") {
                 printf("pass\n");
             } else {
-                printf("fail\n");
+                printf("FAIL\n");
             }
         }
     }
 
     void testObjectIteration() {
-        printf("[TEST] Object iteration\n");
+        printf("\n[TEST] Object iteration\n");
         int count = 0;
         auto* objs = r::uobject::game_pool::ptr();
 
@@ -141,64 +141,59 @@ public:
                 count++;
                 if (count == objs->size() - 1) {
                     assert(obj->GetFullName() == "Class Core.Config_ORS");
-                    printf("  First valid object: %s\n", obj->GetFullName().c_str());
+                    printf("    First valid object: %s\n", obj->GetFullName().c_str());
                 }
             }
         }
-        printf("  Valid objects found: %i\n", count);
+        printf("    Valid objects found: %i\n", count);
         assert(count > 0);
-        printf("  ✓ Iteration works\n");
-    }
-
-    void testFindClass() {
-        printf("[TEST] FindClass\n");
+        printf("    ✓ Iteration works\n");
     }
 
     void testFindFunction() {
-        printf("[TEST] FindFunction\n");
-
+        printf("\n[TEST] FindFunction\n");
         {
-            printf("  find method: \n");
+            printf("    - find method: \n");
             auto func = r::ufunction::find("Function Core.Object.GetAppSeconds");
-            printf("  GetFullName: %s\n", func->GetFullName().c_str());
+            printf("      -> GetFullName: %s\n", func->GetFullName().c_str());
             if (func->NumParms == 1) {
                 printf("  -> pass, returned:   %i\n", func->NumParms);
             } else {
-                printf("  -> Fail. Expected: 1, Returned:   %i\n", func->NumParms);
+                printf("  -> FAIL. Expected: 1, Returned:   %i\n", func->NumParms);
             }
         }
 
         {
-            printf("  find static function\n");
+            printf("    find static function\n");
             auto func = r::ufunction::find("Function TAGame.OnlinePlayer_TA.ConvertError");
-            printf("  GetFullName: %s\n", func->GetFullName().c_str());
+            printf("    -> GetFullName: %s\n", func->GetFullName().c_str());
             if (func->NumParms == 2) {
-                printf("  -> pass, returned:   %i\n", func->NumParms);
+                printf("    -> pass, returned:   %i\n", func->NumParms);
             } else {
-                printf("  -> Fail. Expected: 2, Returned:   %i\n", func->NumParms);
+                printf("    -> FAIL. Expected: 2, Returned:   %i\n", func->NumParms);
             }
         }
 
         {
             printf("  find function with lots of params\n");
             auto func = r::ufunction::find("Function TAGame.Tutorial_TA.NotifyKeyInput");
-            printf("  GetFullName: %s\n", func->GetFullName().c_str());
+            printf("    -> GetFullName: %s\n", func->GetFullName().c_str());
             if (func->NumParms == 6) {
-                printf("  -> pass, returned:   %i\n", func->NumParms);
+                printf("    -> pass, returned:   %i\n", func->NumParms);
             } else {
-                printf("  -> Fail. Expected: 6, Returned:   %i\n", func->NumParms);
+                printf("    -> FAIL. Expected: 6, Returned:   %i\n", func->NumParms);
             }
         }
     }
 
     void testFName() {
-        printf("[TEST] FName\n");
+        printf("\n[TEST] FName\n");
         printf("  construct an FName with a wstr arg\n");
         auto name = r::fname::game_pool::find(L"Bump");
         if (name.value().get().ToString() == "Bump") {
-            printf("  ✓ got Bump\n");
+            printf("    ✓ got Bump\n");
         } else {
-            printf("  fail\n");
+            printf("    FAIL\n");
         }
     }
 };

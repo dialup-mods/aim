@@ -21,4 +21,6 @@ struct ObjectProviderFixture {
         provider.__inject_asyncGate(asyncGate);
         provider.__inject_runtime(runtime);
     }
+
+    ~ObjectProviderFixture() = default;
 };
