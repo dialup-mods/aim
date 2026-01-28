@@ -22,6 +22,7 @@
 #include "MutexGuard.h"
 #include "PluginFence.h"
 
+#include "SDK.h"
 #include "AllModelTypes.h"
 #include "UEModel.h"
 #include "ValueResolver.h"

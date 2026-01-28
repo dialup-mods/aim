@@ -1,11 +1,11 @@
 ﻿#include "AIM.h"
 #include "IModule.h"
+#include "IRuntime.h"
+#include "SDK.h"
 
 #include "PluginBase.h"
 
 //#include "GameWrapperProvider.h"
-#include "Runtime.h"
-#include "engine/IRuntime.h"
 
 #include "AsyncGate.h"
 #include "Dispatch.h"
@@ -28,7 +28,6 @@
 #include "ProcessEvent.h"
 #include "ProcessInternal.h"
 
-#include "SDK.h"
 #include "Resolver.h"
 
 #include "ICallFunction.h"
@@ -36,8 +35,8 @@
 #include "IProcessInternal.h"
 #include "Toaster.h"
 
+
 // clang-format off
-using r = Runtime;
 
 // needed for detoured functions
 Resolver* AIM::staticResolver_;
@@ -63,8 +62,7 @@ AIM::modal() -> const char* {
     "\n";
 }
 
-// EngineValidator and ObjectProvider
-bool AIM::populateRuntime() {
+bool AIM::createPopulateRuntime() {
     auto log = getLogger();
     log->debug("Loading Runtime...");
 
@@ -79,29 +77,25 @@ bool AIM::populateRuntime() {
         log->error("Unable to resolve EngineLocator.");
         return false;
     }
-    const uintptr_t gObjAddr = engineLocator->getUObjectsAddress();
-    const uintptr_t gNameAddr = engineLocator->getFNameEntriesAddress();
 
-    if (!gObjAddr || !gNameAddr) {
-        log->error("Cannot initialize.");
+    registerModule(
+    ModuleDefinition<IRuntime>()
+        .withDependency(&IRuntime::__inject_log, "[default]")
+        .withDependency(&IRuntime::__inject_engineLocator, "[default]")
+        .asSingleton()
+    );
+
+    auto runtime = resolve<IRuntime>();
+    if (!runtime) {
+        log->error("Unable to resolve Runtime.");
         return false;
     }
 
-    Runtime::create();
-    r::uobject::game_pool::set(reinterpret_cast<TArray<UObject*>*>(gObjAddr));
-    r::fname::game_pool::set(reinterpret_cast<TArray<FNameEntry*>*>(gNameAddr));
-
-    bool isEngineValid = r::uobject::game_pool::isPopulated() && r::uobject::game_pool::hasUObjects();
-    if (!isEngineValid) {
-        log->error("Failed to start Runtime.");
+    if (!runtime->init()) {
+        log->error("Runtime failed during initialization.");
         return false;
     }
-    log->debug("Engine valid: {}", isEngineValid);
 
-    return true;
-}
-
-bool AIM::loadObjectProvider() {
     getLogger()->debug("Loading ObjectProvider...");
 
     registerModule(ModuleDefinition<AsyncGate>().named("ObjectProviderReady").asSingleton());
@@ -109,6 +103,7 @@ bool AIM::loadObjectProvider() {
     registerModule(ModuleDefinition<ObjectProvider>()
             .withDependency(&ObjectProvider::__inject_log, "[default]")
             .withDependency(&ObjectProvider::__inject_asyncGate, "ObjectProviderReady")
+            .withDependency(&ObjectProvider::__inject_runtime, "ObjectProviderReady")
             .asSingleton());
 
     auto objectProvider = resolve<ObjectProvider>("[default]");
@@ -355,11 +350,7 @@ AIM::startup() {
     auto detourGate = std::make_shared<AsyncGate>();
     registerInstance<AsyncGate>(detourGate, "detour-ready");
 
-    if (!populateRuntime()) {
-        return;
-    }
-
-    if (!loadObjectProvider()) {
+    if (!createPopulateRuntime()) {
         return;
     }
 
@@ -394,6 +385,36 @@ AIM::startup() {
     testToast();
 }
 
+//template <typename T>
+//auto AIM::classOf(UObject*) -> UClass* {
+//    static UClass* cached = [] {
+//        UClass* cls = r::uclass::find(T::className);
+//        if (!cls) {
+//            printf("can't find\n");
+//        }
+//        return cls;
+//    }();
+//    return cached;
+//};
+//
+//template<typename T>
+//auto AIM::getInstanceOf() -> T* {
+//    static_assert(std::is_base_of_v<UObject, T>);
+//
+//    UClass* wanted = r::uobject::classOf<T>();
+//    if (!wanted) return nullptr;
+//
+//    for (UObject* obj : r::uobject::game_pool::ref()) {
+//        if (!obj) continue;
+//        if (obj->ObjectFlags & RF_DefaultOrArchetypeFlags) continue;
+//
+//        if (obj->Class == wanted) {
+//            return static_cast<T*>(obj);
+//        }
+//    }
+//    return nullptr;
+//}
+
 void AIM::testToast() {
     printf("inside test toast\n");
     auto processEvent = resolve<ProcessEvent>();
@@ -404,11 +425,9 @@ void AIM::testToast() {
             .functionName("Function Engine.Interaction.Tick")
             .phase(HookPhase::Post)
             .callback([objectProvider](InvocationContext& ctx) {
-                auto* mgr = objectProvider->getInstanceOf<UNotificationManager_TA>();
-                auto name = r::uobject_utils::getFullName(mgr);
-                printf("  found: %s\n", name.c_str());
-                printf("  toast callback\n");
-                //auto* toaster = mgr->PopUpOnlyNotification(UGenericNotification_TA::StaticClass());
+//                auto* mgr = getInstanceOf<UNotificationManager_TA>();
+//                auto name = r::uobject_utils::getFullName(mgr);
+//                auto* genericNotificationBase = mgr->PopUpOnlyNotification(r::uobject::getStaticClassOf<UGenericNotification_TA>());
                 //auto foo = r::uobject_utils::getFullName(toaster);
                 //printf("  toast: %s\n", foo.c_str());
                 //toaster->SetTitle(L'Foo');

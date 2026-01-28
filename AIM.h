@@ -4,6 +4,7 @@
 #include "IModule.h"
 #include "IPlugin.h"
 #include "PluginBase.h"
+#include "SDK.h"
 
 class AIM : public PluginBase<AIM> {
     AIM_INJECTABLE(AIM)
@@ -12,6 +13,12 @@ class AIM : public PluginBase<AIM> {
     auto getName() const -> const char* override;
     void startup() override;
 
+    template<class T>
+    static auto classOf(UObject*) -> UClass *;
+
+    template<class T>
+    static auto getInstanceOf() -> T *;
+
     void testToast();
 
     [[nodiscard]] auto registerPublicInterfaces() const -> std::vector<PublicInterface> override;
@@ -19,7 +26,7 @@ class AIM : public PluginBase<AIM> {
 
     auto modal() -> const char*;
 
-    bool populateRuntime();
+    bool createPopulateRuntime();
 
     bool loadObjectProvider();
 

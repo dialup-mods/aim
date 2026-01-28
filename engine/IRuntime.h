@@ -7,7 +7,7 @@
 using r = Runtime;
 
 class IRuntime : public IModule {
-    AIM_INJECTABLE(AIMRuntime)
+    AIM_INJECTABLE(IRuntime)
     AIM_INJECT(ILogger, log)
     AIM_INJECT(EngineLocator, engineLocator)
 
@@ -15,22 +15,26 @@ class IRuntime : public IModule {
     virtual ~IRuntime() = default;
 
     bool init() {
-        Runtime::create();
-
         log_->info("AIM Runtime initializing...");
 
-        const uintptr_t fNameEntriesAddr = engineLocator_->getFNameEntriesAddress();
         const uintptr_t uObjectsAddr = engineLocator_->getUObjectsAddress();
+        const uintptr_t fNameEntriesAddr = engineLocator_->getFNameEntriesAddress();
 
         if (!uObjectsAddr || !fNameEntriesAddr) {
             log_->error("Cannot initialize.");
             return false;
         }
 
+        Runtime::create();
         r::fname::game_pool::set(reinterpret_cast<TArray<FNameEntry*>*>(fNameEntriesAddr));
         r::uobject::game_pool::set(reinterpret_cast<TArray<UObject*>*>(uObjectsAddr));
 
-        log_->debug("engine valid: {}", std::to_string(r::uobject::game_pool::hasUObjects() && r::fname::game_pool::isValid()));
+        bool isEngineValid = r::uobject::game_pool::isPopulated() && r::uobject::game_pool::hasUObjects();
+        if (!isEngineValid) {
+            log_->error("Failed to start Runtime.");
+            return false;
+        }
+        log_->debug("Engine valid: {}", std::to_string(r::uobject::game_pool::hasUObjects() && r::fname::game_pool::isValid()));
 
         //log_->info("FNameEntry::Flags     = 0x" + int_to_hex(offsetof(FNameEntry, Flags)));
         //log_->info("FNameEntry::Index     = 0x" + int_to_hex(offsetof(FNameEntry, Index)));
@@ -40,8 +44,8 @@ class IRuntime : public IModule {
         return (r::uobject::game_pool::isPopulated() && r::fname::game_pool::isValid());
     }
 
-    static auto hasUObjects() -> bool { return r::uobject::game_pool::hasUObjects(); }
-    static auto hasFNames() -> bool { return r::fname::game_pool::isValid(); }
+    auto hasUObjects() -> bool { return r::uobject::game_pool::hasUObjects(); }
+    auto hasFNames() -> bool { return r::fname::game_pool::isValid(); }
 
     auto getUObjectsPtr() -> TArray<UObject*>* {
         return r::uobject::game_pool::ptr();

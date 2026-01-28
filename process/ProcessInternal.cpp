@@ -1,25 +1,22 @@
 ﻿#include "ProcessInternal.h"
 #include "AIM.h"
 
-#include "DependencyContainer.h"
 #include "Resolver.h"
 
 #include "AsyncGate.h"
-#include "GameTypes.h" // for FFrame
-
-#include "../task/TaskBuilder.h"
 #include "Dispatch.h"
 #include "EventContext.h"
+#include "GameTypes.h" // for FFrame
 #include "ILogger.h"
+#include "MutexGuard.h"
+#include "ObjectProvider.h"
 #include "PatchBuilder.h"
 #include "PatchManager.h"
 #include "PatchUtils.h"
 #include "ProcessEvent.h"
+#include "TaskBuilder.h"
 
-#include "MutexGuard.h"
-
-#include "ObjectProvider.h"
-
+class UObject;
 namespace p = patchutils;
 
 // for mutex

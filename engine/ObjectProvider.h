@@ -4,17 +4,15 @@
 #include <typeindex>
 
 #include "IModule.h"
-
-#include "Runtime.h"
-
 #include "IObjectProvider.h"
-
-#include "ILogger.h"      // no fwd declare
+#include "ILogger.h"
+#include "SDK.h"
 
 class PluginState;
 class AsyncGate;
-#include "SDK.h"
+class IRuntime;
 
+#include "IRuntime.h"
 using r = Runtime;
 
 class ObjectProvider : public IObjectProvider {
@@ -22,10 +20,10 @@ class ObjectProvider : public IObjectProvider {
 
     AIM_INJECT(ILogger, log)
     AIM_INJECT(AsyncGate, asyncGate)
+    AIM_INJECT(IRuntime, runtime)
 
     int32_t iterateLimit_ = 100;
 
-  public:
     ObjectProvider() = default;
     ~ObjectProvider();
 

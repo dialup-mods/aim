@@ -5,7 +5,7 @@
 #include <sstream>
 
 #include "EngineLocator.h"
-#include "Ilogger.h"
+#include "ILogger.h"
 
 auto EngineLocator::int_to_hex(uintptr_t value, size_t width) -> std::string {
     std::ostringstream oss;

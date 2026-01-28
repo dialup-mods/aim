@@ -1,10 +1,6 @@
 #pragma once
 #include <cassert>
 
-#ifndef SDK_DLL
-#error "SDK_DLL must be defined at compile time"
-#endif
-
 #include <Windows.h>
 #include <filesystem>
 #include <Psapi.h>
@@ -73,92 +69,60 @@ inline auto getUObjectsAddress() -> uintptr_t {
     return uObjectsAddress;
 }
 
-template<typename T, typename Predicate>
-void forEachObject(Predicate&& pred) {
-    auto& objects = r::uobject::game_pool::ref();
+//template<typename T, typename Predicate>
+//void forEachObject(Predicate&& pred) {
+//    auto& objects = r::uobject::game_pool::ref();
+//
+//    for (int32_t i = objects.size() - 100; i >= 0; --i) {
+//        UObject* obj = objects.at(i);
+//
+//        if (!obj || !obj->Class || !obj->IsA(T::StaticClass())) {
+//            continue;
+//        }
+//
+//        pred(static_cast<T*>(obj));
+//    }
+//}
+//
+//template<typename T, typename Predicate>
+//void forEachValidLiveObject(Predicate&& pred) {
+//    static_assert(std::is_base_of_v<UObject, T>, "T must be a UObject-derived type");
+//
+//    auto& objects = r::uobject::game_pool::ref();
+//
+//    for (int32_t i = objects.size() - 100; i >= 0; --i) {
+//        UObject* obj = objects.at(i);
+//        if (!obj) { continue; }
+//
+//        uintptr_t addr = reinterpret_cast<uintptr_t>(obj);
+//        if (addr < 0x10000 || addr > 0xFFFFFFFFFF) { continue; } // skip obviously bad memory
+//
+//        if (!obj->Class) { continue; }
+//
+//        if (!obj->IsA(T::StaticClass())) { continue; }
+//
+//        if (obj->HasAnyFlags(static_cast<EObjectFlags>(RF_BeginDestroyed || RF_FinishDestroyed || RF_DefaultOrArchetypeFlags))) { continue; }
+//
+//        pred(static_cast<T*>(obj));
+//    }
+//}
 
-    for (int32_t i = objects.size() - 100; i >= 0; --i) {
-        UObject* obj = objects.at(i);
-
-        if (!obj || !obj->Class || !obj->IsA(T::StaticClass())) {
-            continue;
-        }
-
-        pred(static_cast<T*>(obj));
-    }
-}
-
-template<typename T, typename Predicate>
-void forEachValidLiveObject(Predicate&& pred) {
-    static_assert(std::is_base_of_v<UObject, T>, "T must be a UObject-derived type");
-
-    auto& objects = r::uobject::game_pool::ref();
-
-    for (int32_t i = objects.size() - 100; i >= 0; --i) {
-        UObject* obj = objects.at(i);
-        if (!obj) { continue; }
-
-        uintptr_t addr = reinterpret_cast<uintptr_t>(obj);
-        if (addr < 0x10000 || addr > 0xFFFFFFFFFF) { continue; } // skip obviously bad memory
-
-        if (!obj->Class) { continue; }
-
-        if (!obj->IsA(T::StaticClass())) { continue; }
-
-        if (obj->HasAnyFlags(static_cast<EObjectFlags>(RF_BeginDestroyed || RF_FinishDestroyed || RF_DefaultOrArchetypeFlags))) { continue; }
-
-        pred(static_cast<T*>(obj));
-    }
-}
-
-template<typename T>
-T* getStaticClassOf() {
-    if (!std::is_base_of_v<UObject, T>) { return nullptr; }
-
-    const auto& objects = r::uobject::game_pool::ref();
-    printf("num objects: %i\n", objects.size());
-    printf("T className: %s\n", T::className);
-
-    for (size_t i = objects.size(); i-- > 0; ) {
-        UObject* uObject = r::uobject::game_pool::ref().at(i);
-        if (!uObject) { continue; }
-        if (uObject->ObjectFlags & RF_DefaultOrArchetypeFlags) { continue; }
-        auto objName = r::uobject_utils::getFullName(uObject);
-        if (std::strcmp(
-                objName.c_str(),
-                T::className
-            ) == 0) {
-            printf("found at index: %llu/%i\n", i, r::uobject::game_pool::ref().size());
-            return static_cast<T*>(uObject);
-            }
-    }
-
-    return nullptr;
-}
-
-template<typename T>
-T* getInstanceOf() {
-    if (!std::is_base_of_v<UObject, T>) { return nullptr; }
-
-    const auto& objects = r::uobject::game_pool::ref();
-    printf("num objects: %i\n", objects.size());
-    printf("T className: %s\n", T::className);
-
-    for (size_t i = objects.size(); i-- > 0; ) {
-        UObject* uObject = r::uobject::game_pool::ref().at(i);
-        if (!uObject) { continue; }
-        if (uObject->ObjectFlags & RF_DefaultOrArchetypeFlags) { continue; }
-        auto objName = r::uobject_utils::getFullName(uObject);
-        if (objName.find("NotificationManager_TA") != std::string::npos) {
-            printf("->name: %s\n", objName.c_str());
-        }
-    }
-
-    return nullptr;
-}
-
-
-
+//inline auto IsA(const UClass* given, const UClass* other) -> bool {
+//    if (!given || !other) { return false; }
+//
+//    std::unordered_set<const UClass*> visited;  // Detect cycles
+//
+//    for (const UClass* cls = given; cls; cls = reinterpret_cast<UClass*>(cls->SuperField)) {
+//        if (visited.contains(cls)) {
+//            printf("ERROR: Cycle detected in inheritance chain at %p\n", cls);
+//            return false;
+//        }
+//        visited.insert(cls);
+//
+//        if (cls == other) return true;
+//    }
+//    return false;
+//}
 
 class RuntimeTest {
 public:
@@ -537,11 +501,11 @@ public:
     }
 
 
-    void printName(FNameEntry* entry) {
+    void printName(const FNameEntry* entry) {
         printf("entry: %s\n", entry->ToString().c_str());
     }
 
-    bool isMatch(FNameEntry* entry) {
+    bool isMatch(const FNameEntry* entry) {
         if (entry->ToString() == "NotificationManager_TA") {
             printf("entry id: %i\n", entry->GetIndex());
             return true;
@@ -561,15 +525,15 @@ public:
     }
 
     void testUObjectUtil() {
-        printf("[TEST] ObjectUtil\n");
+        //printf("[TEST] ObjectUtil\n");
 
-        auto* mgr = getInstanceOf<UNotificationManager_TA>();
-        if (!mgr) {
-            printf("  fail - no object\n");
-            return;
-        }
-        auto name = r::uobject_utils::getName(mgr);
-        printf("  returned name: %s\n", name.c_str());
+        //auto* mgr = r::uobject::getInstanceOf<UNotificationManager_TA>();
+        //if (!mgr) {
+        //    printf("  fail - no object\n");
+        //    return;
+        //}
+        //auto name = r::uobject_utils::getName(mgr);
+        //printf("  returned name: %s\n", name.c_str());
 
         //auto name = r::fname::game_pool::getString(L"NotificationManager_TA");
         //printf("%s\n", name.ToString().c_str());
