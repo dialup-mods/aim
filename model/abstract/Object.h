@@ -416,7 +416,7 @@ public:
         return str;
     }
 
-    [[nodiscard]] auto asString() -> std::string {
+    auto asString() const -> std::string {
         std::ostringstream oss;
         oss << "CacheEntry {\n";
         oss << "  CacheType:     \"" << getCacheType() << "\"\n";
