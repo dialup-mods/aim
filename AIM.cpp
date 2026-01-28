@@ -1,12 +1,9 @@
 ﻿#include "AIM.h"
 #include "IModule.h"
 #include "IRuntime.h"
-#include "SDK.h"
 
 #include "PluginBase.h"
-
 //#include "GameWrapperProvider.h"
-
 #include "AsyncGate.h"
 #include "Dispatch.h"
 #include "ILogger.h"
@@ -34,9 +31,6 @@
 #include "IProcessEvent.h"
 #include "IProcessInternal.h"
 #include "Toaster.h"
-
-
-// clang-format off
 
 // needed for detoured functions
 Resolver* AIM::staticResolver_;
@@ -464,7 +458,6 @@ AIM::shutdown() {
     auto cfGate = std::make_shared<AsyncGate>();
 
     log->trace("remove");
-    // clang-format off
     //removeDetour(cf, cfGate, log);
     removeDetour(pe, peGate, log);
     //gateDestroy->setReady();
@@ -493,5 +486,3 @@ create() {
 extern "C" __declspec(dllexport) void destroy(const IPlugin* instance) {
     delete instance;
 }
-
-// clang-format on
