@@ -1,10 +1,6 @@
 #pragma once
 #include <cassert>
 
-#include <Windows.h>
-#include <filesystem>
-#include <Psapi.h>
-
 #include "ILogger.h"
 #include "Runtime.h"
 #include "SDK.h"
@@ -24,16 +20,6 @@ using r = Runtime;
 //    str.ArrayData[s.size()] = L'\0';
 //    return str;
 //}
-//auto MakeEngineFString(wchar_t* s) -> FString {
-//    // Borrowed input FString (stack-only, never escapes)
-//    FString borrowed;
-//    borrowed.ArrayData  = s;
-//    borrowed.ArrayCount = s ? static_cast<int32_t>(wcslen(s) + 1) : 0;
-//    borrowed.ArrayMax   = borrowed.ArrayCount;
-
-//    // Engine allocates + returns a real FString
-//    return UObject::RepeatString(borrowed, 1);
-//}
 
 class ObjectProviderTest {
 public:
@@ -46,6 +32,10 @@ public:
             testGetInstanceOf();
             testGetAllInstancesOf();
             //testUObjectUtil();
+            testClassCache();
+            testFString();
+            //testToast();
+            testNotification();
             //testReturnValue();
 //
 //            //testGetInstanceOf();
@@ -84,27 +74,152 @@ public:
     void testGetInstanceOf() {
         printf("\n[TEST] getInstanceOf()\n\n");
 
-        printf("  get instance of UNotificationManager_TA:");
+        printf("  get instance of UNotificationManager_TA: ");
         auto* mgr = objectProvider->provider.getInstanceOf<UNotificationManager_TA>();
         if (!mgr) {
             printf("FAIL\n");
-            return;
+        } else {
+            printf("\n    ret: %s\n", r::uobject_utils::getFullName(mgr).c_str());
         }
-        printf("  ret: %s\n", r::uobject_utils::getFullName(mgr).c_str());
     }
 
     void testGetAllInstancesOf() {
         printf("\n[TEST] getAllInstancesOf()\n\n");
+        //auto objs = objectProvider->provider.getAllInstancesOf<UGFxData_ShopCatalogue_TA>();
+        {
+            printf("  UObjectProvider: ");
+            auto objs = objectProvider->provider.getAllInstancesOf<UObjectProvider>();
+            if (!objs.size()) {
+                printf("FAIL\n");
+            } else {
+                printf("\n");
+                for (auto obj : objs) {
+                    printf("\n  ret: %s\n", r::uobject_utils::getFullName(obj).c_str());
+                }
+            }
+        }
+        {
+            printf("  UObjectUtil: ");
+            auto objs = objectProvider->provider.getAllInstancesOf<UObjectUtil>();
+            if (!objs.size()) {
+                printf("FAIL\n");
+            } else {
+                printf("\n");
+                for (auto obj : objs) {
+                    printf("\n  ret: %s\n", r::uobject_utils::getFullName(obj).c_str());
+                }
+            }
+        }
+        {
+            printf("  UNotificationManager_TA: ");
+            auto objs = objectProvider->provider.getAllInstancesOf<UNotificationManager_TA>();
+            if (!objs.size()) {
+                printf("FAIL\n");
+            } else {
+                printf("\n");
+                for (auto obj : objs) {
+                    printf("\n  ret: %s\n", r::uobject_utils::getFullName(obj).c_str());
+                }
+            }
+        }
+    }
 
-        printf("  get all instances of :");
-        auto objs = objectProvider->provider.getAllInstancesOf<UGFxData_ShopCatalogue_TA>();
-        if (!objs.size()) {
-            printf("FAIL\n");
-            return;
+    void testToast() {
+        printf("\n[TEST] Toaster\n");
+        auto* mgr = reinterpret_cast<UNotificationManager_TA*>(r::uclass::find("Class TAGame.GFxData_NotificationManager_TA"));
+        printf("mgr name: %s\n", r::uobject_utils::getFullName(mgr).c_str());
+        auto staticClass = r::uclass::find("Class TAGame.GenericNotification_TA");
+
+        auto obj = objectProvider->provider.getInstanceOf<UNotificationManager_TA>();
+        printf("  ret: %s\n", r::uobject_utils::getFullName(obj).c_str());
+
+        auto* toast = reinterpret_cast<UNotification_TA*>(mgr->PopUpOnlyNotification(staticClass));
+        printf("toast: %s\n", r::fname::game_pool::getString(toast->Name).value().c_str());
+
+        auto man = objectProvider->provider.getInstanceOf<UNotificationManager_TA>();
+        printf("mgr name: %s\n", r::uobject_utils::getFullName(man).c_str());
+    }
+
+    void testFString() {
+        printf("\n[TEST] FString\n");
+        printf("  creating FString\n");
+        auto foo = FString(L"Foo");
+        printf("  fstring: %s\n", foo.ToString().c_str());
+    }
+
+    void testClassCache() {
+        printf("\n[TEST] Class Cache / Lookup\n");
+        printf("  building class name cache from CDOs\n");
+        objectProvider->provider.buildClassNameCacheFromCDOs();
+        printf("  getting classOf UNotificationManager_TA: \n");
+        auto* mgr = objectProvider->provider.classOf<UNotificationManager_TA>();
+        printf("    mgr name: %s\n", r::uobject_utils::getFullName(mgr).c_str());
+    }
+
+    void testNotification() {
+        printf("\n[TEST] Notification\n");
+        printf("  finding transient UNotificationManager_TA\n");
+        auto* mgr = objectProvider->provider.getInstanceOf<UNotificationManager_TA>();
+        printf("  -> found: %s\n", mgr->GetFullName().c_str());
+
+        printf("  finding \"Static\" class for UGenericNotification_TA\n");
+        auto* notificationClass = objectProvider->provider.classOf<UGenericNotification_TA>();
+        printf("    -> notification class: %s\n", notificationClass->GetFullName().c_str());
+
+        {
+            printf("  UNotification_TA: ");
+            auto objs = objectProvider->provider.getAllInstancesOf<UNotification_TA>();
+            if (!objs.size()) {
+                printf("FAIL\n");
+            } else {
+                printf("\n");
+                for (auto obj : objs) {
+                    printf("\n  ret: %s\n", r::uobject_utils::getFullName(obj).c_str());
+                }
+            }
         }
-        for (auto obj : objs) {
-            printf("  ret: %s\n", r::uobject_utils::getFullName(obj).c_str());
+
+        // WARNING
+        // PE GC's the return value
+        UNotification_TA* ret = mgr->PopUpOnlyNotification(notificationClass);
+        printf("    after PopUpOnlyNotification\n");
+
+        {
+            printf("  UNotificationManager_TA: ");
+            auto objs = objectProvider->provider.getAllInstancesOf<UNotification_TA>();
+            if (!objs.size()) {
+                printf("FAIL\n");
+            } else {
+                printf("\n");
+                for (auto obj : objs) {
+                    printf("\n  ret: %s\n", r::uobject_utils::getFullName(obj).c_str());
+                }
+            }
         }
+
+
+        //r::uobject::game_pool::find(ret);
+        //printf("    -> actual notification: %s\n", ret->Name.ToString().c_str());
+
+        //actualNotification->PopUpDuration = 4.0f;
+        //printf("    ptr: %p\n", mgr->AddNotification(mgr, 0));
+        //printf("    creating toaster: \n");
+        //auto* toaster = mgr->PopUpOnlyNotification(UGenericNotification_TA::StaticClass());
+        //auto* notificationClass = r::uclass::find("Class TAGame.GenericNotification_TA");
+
+                   //if (toaster) {
+                   //    printf("[toaster] %s\n", toaster->GetFullName().c_str());
+                   //    toaster->SetTitle(L"Super");
+                   //    toaster->SetBody(L"fooo");
+                   //    toaster->PopUpDuration = 4;
+                   //    printf("    pass: %s\n", toaster->GetFullName().c_str());
+                   //} else {
+                   //    printf("    fail\n");
+                   //}
+    }
+
+    void testProcessInternal() {
+
     }
 
     void testDataStores() {
@@ -203,98 +318,10 @@ public:
         return false;
     }
 
-    void testUObjectUtil() {
-        //printf("[TEST] ObjectUtil\n");
-
-        //auto* mgr = r::uobject::getInstanceOf<UNotificationManager_TA>();
-        //if (!mgr) {
-        //    printf("  fail - no object\n");
-        //    return;
-        //}
-        //auto name = r::uobject_utils::getName(mgr);
-        //printf("  returned name: %s\n", name.c_str());
-
-        //auto name = r::fname::game_pool::getString(L"NotificationManager_TA");
-        //printf("%s\n", name.ToString().c_str());
-        //auto* foundClass = UObjectUtil::FindClass(name);
-        //printf("after findclass\n");
-
-        ////if (foundClass->Class->Name == name) {
-        ////    printf("  ✓ Class->Name attribute matches given name\n");
-        ////} else {
-        ////    printf("  fail\n");
-        ////}
-
-        //printf("  Call GetFullName() on found class\n");
-        //printf("    res: %s\n", foundClass->GetFullName().c_str());
-
-
-
-        ////printf("  get instance\n");
-        ////auto* objectUtil = getInstanceOf<UObjectUtil>();
-        ////if (objectUtil) {
-        ////    printf("  ✓ not null\n");
-        ////} else {
-        ////    printf("  fail. was null\n");
-        ////}
-
-        ////printf("  get static class\n");
-        ////auto* objectUtilClass = UObjectUtil::StaticClass();
-        ////if (objectUtilClass) {
-        ////    printf("  ✓ not null\n");
-        ////} else {
-        ////    printf("  fail. was null\n");
-        ////    return;
-        ////}
-
-        ////auto* util = reinterpret_cast<UObjectUtil*>(objectUtilClass);
-        ////UObjectUtil::FindClass();
-    }
-
-    //void testGetInstanceOf() {
-    //    printf("[TEST] GetInstanceOf\n");
-    //    {
-    //        auto* mgr = getInstanceOf<UNotificationManager_TA>();
-
-    //        printf("  finding UNotificationManager_TA: ");
-    //        if (mgr) {
-    //            printf("pass, found %s\n", mgr->GetFullName().c_str());
-    //        } else {
-    //            printf("fail\n");
-    //        }
-    //    }
-
-    //    {
-    //        auto objs = getAllInstancesOf<AWorldInfo>();
-
-    //        for (auto* obj : objs) {
-    //            printf("  finding AWorldInfo: ");
-    //            if (obj) {
-    //                printf("pass, found %s\n", obj->GetFullName().c_str());
-    //            } else {
-    //                printf("fail\n");
-    //            }
-
-    //            if (!obj->EngineVersion.ToString().empty()) {
-    //                printf("  world time seconds: %f\n", obj->TimeSeconds);
-    //                printf("  world engine version: %s\n", obj->EngineVersion.ToString().c_str());
-    //                printf("  world computer name: %s\n", obj->ComputerName.ToString().c_str());
-    //            }
-    //        }
-    //    }
-
-    //    //auto res = UEngine::GetCurrentWorldInfo();
-    //    //auto* cls = r::uclass::find("Class Engine.Engine");
-
-    //    //printf("  from engine static world time seconds: %f\n", res->TimeSeconds);
-    //    //printf("  from engine static world engine version: %s\n", res->EngineVersion.ToString().c_str());
-    //    //printf("  from engine static world computer name: %s\n", res->ComputerName.ToString().c_str());
-    //}
 
 
     void testProcessEventDirect() {
         printf("[TEST] Direct ProcessEvent call (bypass SDK wrapper)\n");
-
 
         //auto* coreObjStatic = r::uclass::find("Class Core.Object");
         //if (!coreObjStatic) {
@@ -357,75 +384,7 @@ public:
         //    }
 
         //}
-
-        //{
-        //    auto* obj = getInstanceOf<UObject>();
-        //    auto* func = r::ufunction::find("Function Core.Object.GetEngineVersion");
-        //    printf("Calling PE directly on obj=%p, func=%p\n", obj, func);
-        //    fflush(stdout);
-
-        //    auto vtable = *reinterpret_cast<void***>(obj);
-        //    auto peFunc = reinterpret_cast<void(*)(UObject*, UFunction*, void*, void*)>(vtable[67]);
-        //    struct {
-        //        uint8_t* ReturnValue;
-        //    } params;
-        //    peFunc(obj, func, &params, nullptr);
-
-        //    printf("    ret: %p\n", params.ReturnValue);
-        //}
-
-        //{
-        //    auto worlds = getAllInstancesOf<AWorldInfo>();
-
-        //    struct paramStruct {
-        //        uint8_t* ReturnValue;
-        //    };
-
-        //    for (auto* world : worlds) {
-        //        printf("  finding AWorldInfo: ");
-        //        if (world) {
-        //            printf("pass, found %s\n", world->GetFullName().c_str());
-        //        } else {
-        //            printf("fail\n");
-        //        }
-
-        //        if (!world->EngineVersion.ToString().empty()) {
-        //            printf("  world time seconds: %f\n", world->TimeSeconds);
-        //            printf("  world engine version: %s\n", world->EngineVersion.ToString().c_str());
-        //            printf("  world computer name: %s\n", world->ComputerName.ToString().c_str());
-
-        //            struct {
-        //                uint32_t bIncludePrefix;
-        //                FString ReturnValue = {};
-        //            } params;
-        //            params.bIncludePrefix = 1;
-
-        //            r::process_event::call(world, r::ufunction::find("Function Engine.WorldInfo.GetMapName"), &params);
-        //            printf("  ret ptr: %p\n", &params.ReturnValue);
-        //            printf("  map name: %s\n", params.ReturnValue.ToString().c_str());
-        //            printf("  map name: %ls\n", params.ReturnValue.ArrayData);
-
-        //            struct {
-        //                AWorldInfo* ReturnValue;
-        //            } worldInfoParams;
-        //            UFunction* getWorldInfo = r::ufunction::find("Function Engine.Engine.GetCurrentWorldInfo");
-        //            r::process_event::call(world, getWorldInfo, &worldInfoParams);
-        //            if (worldInfoParams.ReturnValue != nullptr) {
-        //                printf("  ret: %p\n", worldInfoParams.ReturnValue);
-        //                auto* retWorldInfoObj = worldInfoParams.ReturnValue;
-        //                printf("  console type: %i\n", retWorldInfoObj->GetConsoleType());
-        //            }
-        //        }
-        //    }
-        //}
    }
-
-        //// Player controller - should exist
-        //UFunction* getPCFunc = r::ufunction::find("Function Engine.WorldInfo.GetALocalPlayerController");
-        //struct { APlayerController* ReturnValue; } pcParams{};
-        //peFunc(worldInfo, getPCFunc, &pcParams);
-        //printf("PlayerController: %p\n", pcParams.ReturnValue);    }
-
 
 //    void testNotification() {
 //        printf("[TEST] Notification\n");

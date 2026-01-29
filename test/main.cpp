@@ -4,6 +4,8 @@
 #include "TestConsole.h"
 #include "test_Runtime.h"
 #include "test_ObjectProvider.h"
+#include "test_Detour_ProcessEvent.h"
+#include "test_Detour_ProcessInternal.h"
 
 uintptr_t gDllStart = 0;
 uintptr_t gDllEnd   = 0;
@@ -58,6 +60,12 @@ Worker(const LPVOID lpParam) {
 
         ObjectProviderTest objTest;
         objTest.run();
+
+        ProcessEventTest peTest;
+        peTest.run();
+
+        ProcessInternalTest piTest;
+        piTest.run();
 
     }
     removeCrashShield();

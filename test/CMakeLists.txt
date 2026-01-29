@@ -18,7 +18,24 @@ include_directories(
     ${CMAKE_SOURCE_DIR}/mock/plugin
     ${CMAKE_SOURCE_DIR}
     ${CMAKE_SOURCE_DIR}/fixtures
+    ${CMAKE_SOURCE_DIR}/../
+    ${CMAKE_SOURCE_DIR}/../context
+    ${CMAKE_SOURCE_DIR}/../core
+    ${CMAKE_SOURCE_DIR}/../dispatch
     ${CMAKE_SOURCE_DIR}/../engine
+    ${CMAKE_SOURCE_DIR}/../include
+    ${CMAKE_SOURCE_DIR}/../lifecycle
+    ${CMAKE_SOURCE_DIR}/../memory
+    ${CMAKE_SOURCE_DIR}/../process
+    ${CMAKE_SOURCE_DIR}/../task
+    ${CMAKE_SOURCE_DIR}/../model
+    ${CMAKE_SOURCE_DIR}/../model/abstract
+    ${CMAKE_SOURCE_DIR}/../model/base
+    ${CMAKE_SOURCE_DIR}/../model/helpers
+    ${CMAKE_SOURCE_DIR}/../model/properties
+    ${CMAKE_SOURCE_DIR}/../model/resolve
+    ${CMAKE_SOURCE_DIR}/../model/types
+    ${CMAKE_SOURCE_DIR}/../util
     ${DIALUP_INSTALL_DIR}/include/v1
     ${DIALUP_INSTALL_DIR}/include/ue_model/v1
     ${DIALUP_INSTALL_DIR}/sdk-plugin/include
@@ -27,7 +44,17 @@ include_directories(
 
 set(SOURCES
     main.cpp
-    ../engine/EngineLocator.cpp
+    ${CMAKE_SOURCE_DIR}/../dispatch/Dispatch.cpp
+    ${CMAKE_SOURCE_DIR}/../engine/EngineLocator.cpp
+    ${CMAKE_SOURCE_DIR}/../engine/EngineLocator.cpp
+    ${CMAKE_SOURCE_DIR}/../engine/ObjectProvider.cpp
+    ${CMAKE_SOURCE_DIR}/../memory/PatchBuilder.cpp
+    ${CMAKE_SOURCE_DIR}/../memory/PatchManager.cpp
+    ${CMAKE_SOURCE_DIR}/../process/CallFunction.cpp
+    ${CMAKE_SOURCE_DIR}/../process/ProcessEvent.cpp
+    ${CMAKE_SOURCE_DIR}/../process/ProcessInternal.cpp
+    ${CMAKE_SOURCE_DIR}/../task/TaskQueue.cpp
+    ${CMAKE_SOURCE_DIR}/../model/UEModel.cpp
 )
 
 #add_executable(AllTests

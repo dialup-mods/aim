@@ -33,6 +33,9 @@ public:
             testClassLookup();
             testFindFunction();
             testFName();
+
+            testFindProcessInternal();
+
         } __except (EXCEPTION_EXECUTE_HANDLER) {
             printf("big test exception\n");
         }
@@ -195,5 +198,13 @@ public:
         } else {
             printf("    FAIL\n");
         }
+    }
+
+    void testFindProcessInternal() {
+        printf("\n[TEST] FindProcessInternal\n");
+
+        printf("  searching for Function Engine.HUD.PostRender");
+        auto fn = r::ufunction::find("Function Engine.HUD.PostRender")->Func.Ptr;
+        printf("    found possible PI: %p\n", fn);
     }
 };

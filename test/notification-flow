@@ -1,0 +1,361 @@
+
+void InstancesComponent::SpawnNotification(const std::string& title, const std::string& content, int duration, bool log)
+{
+	UNotificationManager_TA* notificationManager = Instances.GetInstanceOf<UNotificationManager_TA>();
+	if (!notificationManager)
+		return;
+
+	if (!notificationClass)
+		notificationClass = UGenericNotification_TA::StaticClass();
+
+	UNotification_TA* notification = notificationManager->PopUpOnlyNotification(notificationClass);
+	if (!notification)
+		return;
+
+	FString titleFStr   = FString::create(title);
+	FString contentFStr = FString::create(content);
+
+	notification->SetTitle(titleFStr);
+	notification->SetBody(contentFStr);
+	notification->PopUpDuration = duration;
+
+	if (log)
+		LOG("[{}] {}", title.c_str(), content.c_str());
+}
+
+
+
+ int32_t
+[PE] (pre):
+     -> fn     Function TAGame.NotificationManager_TA.PopUpOnlyNotification
+     -> ptr    00007FF6B25A26B8
+     -> self   NotificationManager_TA Transient.GameEngine_TA.LocalPlayer_TA.OnlinePlayer_TA.NotificationManager_TA
+     -> ptr    00007FF6B28E91F0
+     -> params 000000EE20EFF230
+[PE] (pre):
+     -> fn     Function TAGame.Notification_TA.Init
+     -> ptr    00007FF6B25A26B8
+     -> self   GenericNotification_TA Transient.GenericNotification_TA
+     -> ptr    00007FF6B28E8F80
+     -> params 000000EE20EFEDD0
+[PE] (post):
+     -> fn     Function TAGame.Notification_TA.Init
+     -> ptr    00007FF6B25A26B8
+     -> self   GenericNotification_TA Transient.GenericNotification_TA
+     -> ptr    00007FF6B28E8F80
+     -> params 000000EE20EFEDD0
+i: 0
+ class UNotificationManager_TA*
+[PE] (pre):
+     -> fn     Function TAGame.Notification_TA.OnNotificationCreated
+     -> ptr    00007FF6B25A26B8
+     -> self   GenericNotification_TA Transient.GenericNotification_TA
+     -> ptr    00007FF6B28E8F80
+     -> params 000000EE20EFEDD0
+[PE] (post):
+     -> fn     Function TAGame.Notification_TA.OnNotificationCreated
+     -> ptr    00007FF6B25A26B8
+     -> self   GenericNotification_TA Transient.GenericNotification_TA
+     -> ptr    00007FF6B28E8F80
+     -> params 000000EE20EFEDD0
+i: 0
+ uint32_t
+[PE] (pre):
+     -> fn     Function TAGame.NotificationManager_TA.EventNotificationAdded
+     -> ptr    00007FF6B25A26B8
+     -> self   NotificationManager_TA Transient.GameEngine_TA.LocalPlayer_TA.OnlinePlayer_TA.NotificationManager_TA
+     -> ptr    00007FF6B28E91F0
+     -> params 000000EE20EFED40
+[PE] (post):
+     -> fn     Function TAGame.NotificationManager_TA.EventNotificationAdded
+     -> ptr    00007FF6B25A26B8
+     -> self   NotificationManager_TA Transient.GameEngine_TA.LocalPlayer_TA.OnlinePlayer_TA.NotificationManager_TA
+     -> ptr    00007FF6B28E91F0
+     -> params 000000EE20EFED40
+i: 0
+ class UNotificationManager_TA*
+i: 0
+ class UNotification_TA*
+[PE] (pre):
+     -> fn     Function TAGame.GFxData_NotificationManager_TA.HandleNotificationAdded
+     -> ptr    00007FF6B25A26B8
+     -> self   GFxData_NotificationManager_TA Transient.GFxData_NotificationManager_TA
+     -> ptr    00007FF6B28894E8
+     -> params 000000EE20EFECF0
+[PE] (post):
+     -> fn     Function TAGame.GFxData_NotificationManager_TA.HandleNotificationAdded
+     -> ptr    00007FF6B25A26B8
+     -> self   GFxData_NotificationManager_TA Transient.GFxData_NotificationManager_TA
+     -> ptr    00007FF6B28894E8
+     -> params 000000EE20EFECF0
+i: 0
+ class UNotificationManager_TA*
+i: 0
+ class UNotification_TA*
+[PE] (pre):
+     -> fn     Function TAGame.Notification_TA.OnPopUpOnlyNotificationCreated
+     -> ptr    00007FF6B25A26B8
+     -> self   GenericNotification_TA Transient.GenericNotification_TA
+     -> ptr    00007FF6B28E8F80
+     -> params 000000EE20EFEE40
+[PE] (post):
+     -> fn     Function TAGame.Notification_TA.OnPopUpOnlyNotificationCreated
+     -> ptr    00007FF6B25A26B8
+     -> self   GenericNotification_TA Transient.GenericNotification_TA
+     -> ptr    00007FF6B28E8F80
+     -> params 000000EE20EFEE40
+[PE] (post):
+     -> fn     Function TAGame.NotificationManager_TA.PopUpOnlyNotification
+     -> ptr    00007FF6B25A26B8
+     -> self   NotificationManager_TA Transient.GameEngine_TA.LocalPlayer_TA.OnlinePlayer_TA.NotificationManager_TA
+     -> ptr    00007FF6B28E91F0
+     -> params 000000EE20EFF230
+i: 0
+ <unknown>
+i: 0
+ class UNotification_TA*
+[PE] (pre):
+     -> fn     Function TAGame.Notification_TA.SetTitle
+     -> ptr    00007FF6B25A26B8
+     -> self   GenericNotification_TA Transient.GenericNotification_TA
+     -> ptr    00007FF6B28E8F80
+     -> params 000000EE20EFF230
+[PE] (post):
+     -> fn     Function TAGame.Notification_TA.SetTitle
+     -> ptr    00007FF6B25A26B8
+     -> self   GenericNotification_TA Transient.GenericNotification_TA
+     -> ptr    00007FF6B28E8F80
+     -> params 000000EE20EFF230
+i: 0
+ FString
+i: 0
+ class UNotification_TA*
+[PE] (pre):
+     -> fn     Function TAGame.Notification_TA.SetBody
+     -> ptr    00007FF6B25A26B8
+     -> self   GenericNotification_TA Transient.GenericNotification_TA
+     -> ptr    00007FF6B28E8F80
+     -> params 000000EE20EFF230
+[PE] (post):
+     -> fn     Function TAGame.Notification_TA.SetBody
+     -> ptr    00007FF6B25A26B8
+     -> self   GenericNotification_TA Transient.GenericNotification_TA
+     -> ptr    00007FF6B28E8F80
+     -> params 000000EE20EFF230
+i: 0
+ FString
+i: 0
+ class UNotification_TA*
+[PE] (pre):
+     -> fn     Function TAGame.GFxData_NotificationManager_TA.ProcessPendingNotifications
+     -> ptr    00007FF6B25A26B8
+     -> self   GFxData_NotificationManager_TA Transient.GFxData_NotificationManager_TA
+     -> ptr    00007FF6B28894E8
+     -> params 000000EE20EFF5E0
+[PE] (post):
+     -> fn     Function TAGame.GFxData_NotificationManager_TA.ProcessPendingNotifications
+     -> ptr    00007FF6B25A26B8
+     -> self   GFxData_NotificationManager_TA Transient.GFxData_NotificationManager_TA
+     -> ptr    00007FF6B28894E8
+     -> params 000000EE20EFF5E0
+[PE] (pre):
+     -> fn     Function TAGame.GFxData_NotificationManager_TA.GetNotificationRowIndex
+     -> ptr    00007FF6B25A26B8
+     -> self   GFxData_NotificationManager_TA Transient.GFxData_NotificationManager_TA
+     -> ptr    00007FF6B28894E8
+     -> params 000000EE20EFD8D0
+[PE] (post):
+     -> fn     Function TAGame.GFxData_NotificationManager_TA.GetNotificationRowIndex
+     -> ptr    00007FF6B25A26B8
+     -> self   GFxData_NotificationManager_TA Transient.GFxData_NotificationManager_TA
+     -> ptr    00007FF6B28894E8
+     -> params 000000EE20EFD8D0
+i: 0
+ int32_t
+i: 0
+ int32_t
+[PE] (pre):
+     -> fn     Function TAGame.GFxData_NotificationManager_TA.GetNotificationRowIndex
+     -> ptr    00007FF6B25A26B8
+     -> self   GFxData_NotificationManager_TA Transient.GFxData_NotificationManager_TA
+     -> ptr    00007FF6B28894E8
+     -> params 000000EE20EFD8D0
+[PE] (post):
+     -> fn     Function TAGame.GFxData_NotificationManager_TA.GetNotificationRowIndex
+     -> ptr    00007FF6B25A26B8
+     -> self   GFxData_NotificationManager_TA Transient.GFxData_NotificationManager_TA
+     -> ptr    00007FF6B28894E8
+     -> params 000000EE20EFD8D0
+i: 0
+ int32_t
+i: 0
+ int32_t
+[PE] (pre):
+     -> fn     Function TAGame.GFxData_NotificationManager_TA.GetNotificationRowIndex
+     -> ptr    00007FF6B25A26B8
+     -> self   GFxData_NotificationManager_TA Transient.GFxData_NotificationManager_TA
+     -> ptr    00007FF6B28894E8
+     -> params 000000EE20EFD8D0
+[PE] (post):
+     -> fn     Function TAGame.GFxData_NotificationManager_TA.GetNotificationRowIndex
+     -> ptr    00007FF6B25A26B8
+     -> self   GFxData_NotificationManager_TA Transient.GFxData_NotificationManager_TA
+     -> ptr    00007FF6B28894E8
+     -> params 000000EE20EFD8D0
+i: 0
+ int32_t
+i: 0
+ int32_t
+[PE] (pre):
+     -> fn     Function TAGame.GFxData_NotificationManager_TA.GetNotificationRowIndex
+     -> ptr    00007FF6B25A26B8
+     -> self   GFxData_NotificationManager_TA Transient.GFxData_NotificationManager_TA
+     -> ptr    00007FF6B28894E8
+     -> params 000000EE20EFD8D0
+[PE] (post):
+     -> fn     Function TAGame.GFxData_NotificationManager_TA.GetNotificationRowIndex
+     -> ptr    00007FF6B25A26B8
+     -> self   GFxData_NotificationManager_TA Transient.GFxData_NotificationManager_TA
+     -> ptr    00007FF6B28894E8
+     -> params 000000EE20EFD8D0
+i: 0
+ int32_t
+i: 0
+ int32_t
+[PE] (pre):
+     -> fn     Function TAGame.GFxData_NotificationManager_TA.GetNotificationRowIndex
+     -> ptr    00007FF6B25A26B8
+     -> self   GFxData_NotificationManager_TA Transient.GFxData_NotificationManager_TA
+     -> ptr    00007FF6B28894E8
+     -> params 000000EE20EFD8D0
+[PE] (post):
+     -> fn     Function TAGame.GFxData_NotificationManager_TA.GetNotificationRowIndex
+     -> ptr    00007FF6B25A26B8
+     -> self   GFxData_NotificationManager_TA Transient.GFxData_NotificationManager_TA
+     -> ptr    00007FF6B28894E8
+     -> params 000000EE20EFD8D0
+i: 0
+ int32_t
+i: 0
+ int32_t
+[PE] (pre):
+     -> fn     Function TAGame.GFxData_Notification_TA.SetShown
+     -> ptr    00007FF6B25A26B8
+     -> self   GFxData_GenericNotification_TA Transient.GFxData_GenericNotification_TA
+     -> ptr    00007FF6B2889270
+     -> params 000000EE20EFD010
+[PE] (post):
+     -> fn     Function TAGame.GFxData_Notification_TA.SetShown
+     -> ptr    00007FF6B25A26B8
+     -> self   GFxData_GenericNotification_TA Transient.GFxData_GenericNotification_TA
+     -> ptr    00007FF6B2889270
+     -> params 000000EE20EFD010
+i: 0
+ uint32_t
+[PE] (pre):
+     -> fn     Function TAGame.GFxData_Notification_TA.ClearPopUp
+     -> ptr    00007FF6B25A26B8
+     -> self   GFxData_GenericNotification_TA Transient.GFxData_GenericNotification_TA
+     -> ptr    00007FF6B2889270
+     -> params 000000EE20EFD020
+[PE] (pre):
+     -> fn     Function TAGame.__GFxData_NotificationManager_TA__HandleNotificationRemoved_0x1.__GFxData_NotificationManager_TA__HandleNotificationRemoved_0x1
+     -> ptr    00007FF6B25A26B8
+     -> self   __GFxData_NotificationManager_TA__HandleNotificationRemoved_0x1 Transient.GFxData_NotificationManager_TA.__GFxData_NotificationManager_TA__HandleNotificationRemoved_0x1
+     -> ptr    00007FF6B25B6948
+     -> params 000000EE20EFAC30
+[PE] (post):
+     -> fn     Function TAGame.__GFxData_NotificationManager_TA__HandleNotificationRemoved_0x1.__GFxData_NotificationManager_TA__HandleNotificationRemoved_0x1
+     -> ptr    00007FF6B25A26B8
+     -> self   __GFxData_NotificationManager_TA__HandleNotificationRemoved_0x1 Transient.GFxData_NotificationManager_TA.__GFxData_NotificationManager_TA__HandleNotificationRemoved_0x1
+     -> ptr    00007FF6B25B6948
+     -> params 000000EE20EFAC30
+i: 0
+ <unknown>
+i: 0
+ uint32_t
+[PE] (pre):
+     -> fn     Function TAGame.__GFxData_NotificationManager_TA__HandleNotificationRemoved_0x1.__GFxData_NotificationManager_TA__HandleNotificationRemoved_0x1
+     -> ptr    00007FF6B25A26B8
+     -> self   __GFxData_NotificationManager_TA__HandleNotificationRemoved_0x1 Transient.GFxData_NotificationManager_TA.__GFxData_NotificationManager_TA__HandleNotificationRemoved_0x1
+     -> ptr    00007FF6B25B6948
+     -> params 000000EE20EFAC30
+[PE] (post):
+     -> fn     Function TAGame.__GFxData_NotificationManager_TA__HandleNotificationRemoved_0x1.__GFxData_NotificationManager_TA__HandleNotificationRemoved_0x1
+     -> ptr    00007FF6B25A26B8
+     -> self   __GFxData_NotificationManager_TA__HandleNotificationRemoved_0x1 Transient.GFxData_NotificationManager_TA.__GFxData_NotificationManager_TA__HandleNotificationRemoved_0x1
+     -> ptr    00007FF6B25B6948
+     -> params 000000EE20EFAC30
+i: 0
+ <unknown>
+i: 0
+ uint32_t
+[PE] (pre):
+     -> fn     Function TAGame.__GFxData_NotificationManager_TA__HandleNotificationRemoved_0x1.__GFxData_NotificationManager_TA__HandleNotificationRemoved_0x1
+     -> ptr    00007FF6B25A26B8
+     -> self   __GFxData_NotificationManager_TA__HandleNotificationRemoved_0x1 Transient.GFxData_NotificationManager_TA.__GFxData_NotificationManager_TA__HandleNotificationRemoved_0x1
+     -> ptr    00007FF6B25B6948
+     -> params 000000EE20EFAC30
+[PE] (post):
+     -> fn     Function TAGame.__GFxData_NotificationManager_TA__HandleNotificationRemoved_0x1.__GFxData_NotificationManager_TA__HandleNotificationRemoved_0x1
+     -> ptr    00007FF6B25A26B8
+     -> self   __GFxData_NotificationManager_TA__HandleNotificationRemoved_0x1 Transient.GFxData_NotificationManager_TA.__GFxData_NotificationManager_TA__HandleNotificationRemoved_0x1
+     -> ptr    00007FF6B25B6948
+     -> params 000000EE20EFAC30
+i: 0
+ <unknown>
+i: 0
+ uint32_t
+[PE] (pre):
+     -> fn     Function TAGame.__GFxData_NotificationManager_TA__HandleNotificationRemoved_0x1.__GFxData_NotificationManager_TA__HandleNotificationRemoved_0x1
+     -> ptr    00007FF6B25A26B8
+     -> self   __GFxData_NotificationManager_TA__HandleNotificationRemoved_0x1 Transient.GFxData_NotificationManager_TA.__GFxData_NotificationManager_TA__HandleNotificationRemoved_0x1
+     -> ptr    00007FF6B25B6948
+     -> params 000000EE20EFAC30
+[PE] (post):
+     -> fn     Function TAGame.__GFxData_NotificationManager_TA__HandleNotificationRemoved_0x1.__GFxData_NotificationManager_TA__HandleNotificationRemoved_0x1
+     -> ptr    00007FF6B25A26B8
+     -> self   __GFxData_NotificationManager_TA__HandleNotificationRemoved_0x1 Transient.GFxData_NotificationManager_TA.__GFxData_NotificationManager_TA__HandleNotificationRemoved_0x1
+     -> ptr    00007FF6B25B6948
+     -> params 000000EE20EFAC30
+i: 0
+ <unknown>
+i: 0
+ uint32_t
+[PE] (pre):
+     -> fn     Function TAGame.__GFxData_NotificationManager_TA__HandleNotificationRemoved_0x1.__GFxData_NotificationManager_TA__HandleNotificationRemoved_0x1
+     -> ptr    00007FF6B25A26B8
+     -> self   __GFxData_NotificationManager_TA__HandleNotificationRemoved_0x1 Transient.GFxData_NotificationManager_TA.__GFxData_NotificationManager_TA__HandleNotificationRemoved_0x1
+     -> ptr    00007FF6B25B6948
+     -> params 000000EE20EFAC30
+[PE] (post):
+     -> fn     Function TAGame.__GFxData_NotificationManager_TA__HandleNotificationRemoved_0x1.__GFxData_NotificationManager_TA__HandleNotificationRemoved_0x1
+     -> ptr    00007FF6B25A26B8
+     -> self   __GFxData_NotificationManager_TA__HandleNotificationRemoved_0x1 Transient.GFxData_NotificationManager_TA.__GFxData_NotificationManager_TA__HandleNotificationRemoved_0x1
+     -> ptr    00007FF6B25B6948
+     -> params 000000EE20EFAC30
+i: 0
+ <unknown>
+i: 0
+ uint32_t
+[PE] (post):
+     -> fn     Function TAGame.GFxData_Notification_TA.ClearPopUp
+     -> ptr    00007FF6B25A26B8
+     -> self   GFxData_GenericNotification_TA Transient.GFxData_GenericNotification_TA
+     -> ptr    00007FF6B2889270
+     -> params 000000EE20EFD020
+[PE] (pre):
+     -> fn     Function TAGame.GFxData_NotificationManager_TA.GetNotificationRowIndex
+     -> ptr    00007FF6B25A26B8
+     -> self   GFxData_NotificationManager_TA Transient.GFxData_NotificationManager_TA
+     -> ptr    00007FF6B28894E8
+     -> params 000000EE20EFD8D0
+[PE] (post):
+     -> fn     Function TAGame.GFxData_NotificationManager_TA.GetNotificationRowIndex
+     -> ptr    00007FF6B25A26B8
+     -> self   GFxData_NotificationManager_TA Transient.GFxData_NotificationManager_TA
+     -> ptr    00007FF6B28894E8
+     -> params 000000EE20EFD8D0
+i: 0
+ int32_t
+i: 0
