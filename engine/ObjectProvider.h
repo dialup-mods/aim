@@ -11,6 +11,7 @@
 class PluginState;
 class AsyncGate;
 class IRuntime;
+#include "StringUtil.h"
 
 #include "IRuntime.h"
 using r = Runtime;
@@ -22,14 +23,124 @@ class ObjectProvider : public IObjectProvider {
     AIM_INJECT(AsyncGate, asyncGate)
     AIM_INJECT(IRuntime, runtime)
 
-    int32_t iterateLimit_ = 100;
-
     ObjectProvider() = default;
-    ~ObjectProvider() = default;
+
+    struct TransparentStringHash {
+        size_t operator()(const wchar_t*) const = delete;
+
+        using is_transparent = void;
+
+        size_t operator()(std::string_view sv) const noexcept {
+            return std::hash<std::string_view>{}(sv);
+        }
+
+        size_t operator()(const std::string& s) const noexcept {
+            return std::hash<std::string_view>{}(s);
+        }
+    };
+
+    std::unordered_map<std::string, UClass*, TransparentStringHash, std::equal_to<>> classNameToClass_;
+
+    template<typename T>
+    UClass* classOf() {
+        static UClass* cls = resolveClass(T::className);
+        return cls;
+    }
+
+    UClass* resolveClass(std::string_view className) {
+        auto it = classNameToClass_.find(className);
+        if (it != classNameToClass_.end())
+            return it->second;
+
+        // Optional: diagnostics
+        log_->warn("missing: {}", className);
+        return nullptr;
+    }
+
+    void buildClassNameCacheFromCDOs() {
+        for (UObject* obj : r::uobject::game_pool::ref()) {
+            if (!obj) continue;
+
+            if (obj->ObjectFlags & RF_ClassDefaultObject) {
+                if (UClass* cls = obj->Class) {
+                    classNameToClass_.emplace(
+                        cls->GetFullName(),
+                        cls
+                    );
+                }
+            }
+        }
+    }
+
+
+    //bool isUStruct(const UObject* obj) {
+    //    if (!obj) return false;
+
+    //    // Reinterpret and sanity-check layout
+    //    const auto* s = reinterpret_cast<const UStruct*>(obj);
+
+    //    // UStruct always has PropertySize and Children
+    //    return s->PropertySize >= 0
+    //        && s->Children != nullptr;
+    //}
+    //bool isUClass(const UObject* obj) {
+    //    if (!isUStruct(obj)) return false;
+
+    //    const auto* cls = reinterpret_cast<const UClass*>(obj);
+
+    //    // UClass-only invariant
+    //    return cls->ClassDefaultConstructor != nullptr;
+    //}
+    std::unordered_map<UClass*, UObject*> ClassToCDO_;
+
+    void populateClassToCDO() {
+        for (UObject* obj : r::uobject::game_pool::ref()) {
+            if (!obj) continue;
+
+            if (obj->ObjectFlags & RF_ClassDefaultObject) {
+                if (obj->Class) {
+                    ClassToCDO_[obj->Class] = obj;
+                }
+            }
+        }
+    }
+
+    UClass* FindClassViaCDO(std::function<bool(UObject*)> cdoPredicate) {
+        for (UObject* obj : r::uobject::game_pool::ref()) {
+            if (!obj) continue;
+
+            if (!(obj->ObjectFlags & RF_ClassDefaultObject))
+                continue;
+
+            // This is the class default object
+            UClass* cls = obj->Class;
+            if (!cls) continue;
+
+            if (cdoPredicate(obj)) {
+                return cls;
+            }
+        }
+        return nullptr;
+    }
+
+    // now, on SDK generated types
+    //static UClass* StaticClass() {
+    //    static UClass* cls = nullptr;
+    //    if (!cls) {
+    //        cls = FindClassByCDOPredicate([](UObject* cdo) {
+    //            return /* identify this type */;
+    //        });
+    //    }
+    //    return cls;
+    //}
+    //
+
+
+
+
 
     // fixme
     // replaced with adapter-based lookup + cache.
-
     template<typename T>
     auto getInstanceOf() -> T* {
         if (!std::is_base_of_v<UObject, T>) { return nullptr; }
@@ -67,12 +178,6 @@ class ObjectProvider : public IObjectProvider {
         return matchingObjs;
     }
 
-    //
-    // ProfileQuickChatSave_TAs
-    // if there are multiple instances,
-    // you can scan and pick the one with the biggest Bindings array
-    // (sometimes Rocket League uses Bindings length to track valid saves).
-    //
     // fix me, use flags, see getInstanceOf
     template<typename T>
     bool isValidLiveInstance(T* obj) {
