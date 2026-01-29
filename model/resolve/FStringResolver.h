@@ -15,14 +15,14 @@ struct FStringResolver {
 
         out.storage = ResolvedValue::StorageType::InlineStruct;
         out.kind = ResolvedValue::Kind::String;
-        if (!str || !str->ArrayData || str->ArrayCount <= 0) {
+        if (!str || !str->Data.GetData() || str->Data.Num() <= 0) {
             out.kind = ResolvedValue::Kind::String;
             out.primitiveStr = "";
             return;
         }
 
         // UE3 FString is UTF-16
-        const std::wstring_view wsv(str->ArrayData, str->ArrayCount);
+        const std::wstring_view wsv(str->Data.GetData(), str->Data.Num());
         out.primitiveStr = string_tool::enshrinken(wsv);
     }
 };
