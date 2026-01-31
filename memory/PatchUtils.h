@@ -63,7 +63,7 @@ namespace patchutils {
     }
 
     static uintptr_t& bakkesBase_() {
-        static uintptr_t base = reinterpret_cast<uintptr_t>(GetModuleHandleA("bakkesmod.dll"));
+        static auto base = reinterpret_cast<uintptr_t>(GetModuleHandleA("bakkesmod.dll"));
         return base;
     }
 
@@ -110,7 +110,7 @@ namespace patchutils {
         }
 
         const uint8_t* p = code + offset;
-        size_t remaining = maxBytes - offset;
+        const size_t remaining = maxBytes - offset;
 
         if (remaining < 1)
             return {offset + 1, "db", hexByte(*p)};
@@ -136,7 +136,7 @@ namespace patchutils {
                 // ======================
                 case 0x58: case 0x59: case 0x5A: case 0x5B:
                 case 0x5C: case 0x5D: case 0x5E: case 0x5F: {
-                    bool rex_b = rex & 0x01;
+                    const bool rex_b = rex & 0x01;
                     const char* reg = rex_b
                         ? rreg_name[*p - 0x58]
                         : reg_name[*p - 0x58];
@@ -179,8 +179,8 @@ namespace patchutils {
                 // ======================
                 case 0xB8: case 0xB9: case 0xBA: case 0xBB:
                 case 0xBC: case 0xBD: case 0xBE: case 0xBF: {
-                    bool rex_w = rex & 0x08;
-                    size_t immSize = rex_w ? 8 : 4;
+                    const bool rex_w = rex & 0x08;
+                    const size_t immSize = rex_w ? 8 : 4;
 
                     if (remaining < 1 + immSize)
                         break;
