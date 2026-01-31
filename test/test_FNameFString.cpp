@@ -1,6 +1,6 @@
 #define DOCTEST_CONFIG_IMPLEMENT_WITH_MAIN
 #include <doctest/doctest.h>
-#include "SdkHeaders.hpp"
+#include "SDK.h"
 
 TEST_CASE("FName and FString") {
 const wchar_t* test = L"Hello UE";

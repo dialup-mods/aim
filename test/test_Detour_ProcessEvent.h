@@ -68,23 +68,27 @@ public:
 
         PatchDefinition applyPatch_ = PatchBuilder()
             .name("Process Event")
-
             // create in reverse order
 
-            // slackFn_ -> handle
             .setPosition(patchutils::ptr_to_uintptr(slack))
+
+            // capture and store bytes
+
+            // vtable entry -> handle function
+            .setPosition(patchutils::ptr_to_uintptr(fn))
             .absoluteJump(patchutils::ptr_to_uintptr(&handleFunction))
 
-            // vtable entry -> slackFn_
-            .setPosition(patchutils::ptr_to_uintptr(fn))
-            .absoluteJump(patchutils::ptr_to_uintptr(slack))
-
             .finalize();
+
         auto pm = PatchManager();
         pm.apply(applyPatch_, true);
-        //if (!processEvent->processEvent.buildPatches()) {
-        //    printf("  [PE] FAIL building patches\n");
-        //}
+
+        PatchDefinition removePatch_ = PatchBuilder()
+            .name("Process Event Remove")
+
+            // restore captured old bytes
+
+            .finalize();
     }
 
     void applyDetour() {

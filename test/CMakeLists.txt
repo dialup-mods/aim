@@ -37,7 +37,7 @@ include_directories(
     ${CMAKE_SOURCE_DIR}/../model/types
     ${CMAKE_SOURCE_DIR}/../util
     ${DIALUP_INSTALL_DIR}/include/v1
-    ${DIALUP_INSTALL_DIR}/include/ue_model/v1
+    ${DIALUP_INSTALL_DIR}/include/model/v1
     ${DIALUP_INSTALL_DIR}/sdk-plugin/include
     ${DIALUP_INSTALL_DIR}/include/external/fmt/include
 )
@@ -57,10 +57,6 @@ set(SOURCES
     ${CMAKE_SOURCE_DIR}/../model/UEModel.cpp
 )
 
-#add_executable(AllTests
-#    main.cpp
-#    test_Runtime.cpp
-#)
 add_library(${PROJECT_NAME} SHARED ${SOURCES})
 
 find_package(DialUp-SDK REQUIRED PATHS ${DIALUP_INSTALL_DIR}/sdk-plugin)

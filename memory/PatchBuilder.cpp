@@ -52,7 +52,6 @@ PatchBuilder& PatchBuilder::absoluteJump(uintptr_t to) {
 }
 
 PatchBuilder& PatchBuilder::bytes(std::vector<uint8_t> bytes) {
-    
     PatchStep step;
     step.type = PatchStepType::Bytes;
     step.bytes.assign(std::begin(bytes), std::end(bytes));
