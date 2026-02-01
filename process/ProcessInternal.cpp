@@ -13,14 +13,12 @@
 #include "PatchUtils.h"
 #include "Resolver.h"
 #include "Runtime.h"
-#include "TaskBuilder.h"
 
 using r = Runtime;
 
 class UObject;
 namespace p = patchutils;
 
-// for mutex
 ProcessInternal* ProcessInternal::instance_ = nullptr;
 
 void
@@ -33,21 +31,11 @@ ProcessInternal::init() {
     applyDetour();
 }
 
-void *ProcessInternal::findEnginePIAddress() {
-    auto* fn = r::ufunction::find("Function Engine.HUD.PostRender")->Func.Ptr;
-    printf(" found possible PI: %p\n", fn);
-    return fn;
-}
-
 void* ProcessInternal::findAddress() {
     auto fn = r::ufunction::find("Function Engine.HUD.PostRender")->Func.Ptr;
     printf(" found possible PI: %p\n", fn);
     return fn;
 }
-
-//auto ProcessInternal::getDispatchShutdownGate() -> AsyncGate* {
-//    return dispatch_->getShutdownGate();
-//}
 
 void ProcessInternal::shutdown() {
     dispatch_->shutdown();
@@ -81,22 +69,6 @@ ProcessInternal::applyDetour() {
 
     log_->debug("[PI] detoured");
     appliedGate_->setReady();
-
-    // run inside main event loop
-    // to prevent race conditions
-    //processEvent_->registerTask(TaskBuilder()
-    //        .name("Apply ProcessInternal patch")
-    //        .functionName("Function Engine.Interaction.Tick")
-    //        .phase(HookPhase::Post)
-    //        .callback([this](InvocationContext& ctx) {
-    //            log_->debug("[PI] applying detour at: {}", findAddress());
-    //            detour_->attach(findAddress(), (void*)&handleFunction);
-
-    //            log_->debug("[PI] detoured");
-    //            appliedGate_->setReady();
-    //        })
-    //        .once()
-    //        .build());
 }
 
 void ProcessInternal::removeDetour() {
@@ -112,30 +84,6 @@ void ProcessInternal::removeDetour() {
     //removedGate_->setReady();
     teardownFence_->release("PI");
     std::this_thread::sleep_for(std::chrono::seconds(1));
-
-    // run inside main event loop
-    // to prevent race conditions
-    //processEvent_->registerTask(TaskBuilder()
-    //        .name("[PI] Remove")
-    //        .functionName("Function Engine.Interaction.Tick")
-    //        .phase(HookPhase::Post)
-    //        .callback([this](InvocationContext& ctx) {
-    //            log_->debug("[PI] removing patch...\n");
-
-    //            if (mutex_->tryAcquire(1 /*ms*/)) {
-    //                log_->warn("[PI] Not detoured - nothing to remove");
-    //                mutex_->release();
-    //                removedGate_->setReady();
-    //                return;
-    //            }
-    //            detour_->detach();
-    //            mutex_->release();
-
-    //            removedGate_->setReady();
-    //            log_->debug("[PI] removed\n");
-    //        })
-    //        .once()
-    //        .build());
 }
 
 bool ProcessInternal::waitForUnlock(DWORD timeoutMs) const {
@@ -162,10 +110,8 @@ void __fastcall ProcessInternal::handleFunction(UObject* self, FFrame& stack, vo
         return;
     }
 
-    if(self && self->GetFullName().find("Chat") != std::string::npos) {
-        printf("[PI] %s -> %d\n", self->GetFullName().c_str(), self->ObjectInternalInteger);
-    }
-    //if (log && self && self->GetFullName().find("a") != std::string::npos) {
+    //if(self && self->GetFullName().find("HUD") != std::string::npos) {
+    //    printf("[PI] %s -> %d\n", self->GetFullName().c_str(), self->ObjectInternalInteger);
     //    printf("[PI] %s -> %d\n", self->GetFullName().c_str(), self->ObjectInternalInteger);
     //}
 
@@ -188,13 +134,8 @@ void __fastcall ProcessInternal::handleFunction(UObject* self, FFrame& stack, vo
         dispatch->dispatchPost(self->ObjectInternalInteger, context);
         
         dispatch->dispatchGated(self->ObjectInternalInteger, context);
-    } else {
+
+    } else { // fallback if no dispatcher
         reinterpret_cast<tProcessInternal>(getTrampoline())(self, stack, result);
     }
-
-    //if(self && self->GetFullName().find("Chat") != std::string::npos) {
-    //    if (log) {
-    //        log->logf_debug("[PI]: {:d} -> {:s}", self->ObjectInternalInteger, self->GetFullName());
-    //    }
-    //}
 }
