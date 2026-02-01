@@ -30,7 +30,6 @@
 #include "ICallFunction.h"
 #include "IProcessEvent.h"
 #include "IProcessInternal.h"
-#include "Toaster.h"
 
 Resolver* AIM::staticResolver_ = nullptr;
 
@@ -363,7 +362,6 @@ AIM::startup() {
             getLogger()->debug("AIM gate setReady()");
 
             setPluginReady();
-            testToast();
         });
     });
 
@@ -372,9 +370,6 @@ AIM::startup() {
 
 //    std::shared_ptr<IObjectProvider> iface = resolve<ObjectProvider>();
 //    registerInstance<IObjectProvider>(iface);
-
-
-    //testToast();
 }
 
 //template <typename T>
@@ -408,76 +403,26 @@ AIM::startup() {
 //}
 
 void AIM::testToast() {
-    printf("inside test toast\n");
     auto processEvent = resolve<ProcessEvent>();
-    auto processInternal = resolve<ProcessInternal>();
     auto objectProvider = resolve<ObjectProvider>();
 
+    // spawn one, getinstance returns this new one
+    // and it shows a notification in the friends, etc panel
+    //UNotification_TA* notification;
+
     processEvent->registerTask(TaskBuilder()
-            .name("pi hud test")
+            .name("Toast")
             .functionName("Function Engine.HUD.PostRender")
             .phase(HookPhase::Post)
             .callback([objectProvider](InvocationContext& ctx) {
-                printf("  finding transient UNotificationManager_TA\n");
                 auto* mgr = objectProvider->getInstanceOf<UNotificationManager_TA>();
-                printf("  -> found: %s\n", mgr->GetFullName().c_str());
-
-                printf("  finding \"Static\" class for UGenericNotification_TA\n");
                 auto* notificationClass = objectProvider->classOf<UGenericNotification_TA>();
-                printf("    -> notification class: %s\n", notificationClass->GetFullName().c_str());
-
                 UNotification_TA* ret = mgr->PopUpOnlyNotification(notificationClass);
-                ret->SetTitle(FString(L"Foo"));
-                ret->SetBody(FString(L"Foo"));
-                printf("\n  ret: %s\n", r::uobject_utils::getFullName(ret).c_str());
+                ret->SetTitle(FString(L"Welcome."));
+                ret->SetBody(FString(L"You've got mail!"));
             })
             .once()
             .build());
-
-    processInternal->registerTask(TaskBuilder()
-            .name("Test")
-            .phase(HookPhase::Execute)
-            .execute([]() { printf("\n\n\n execute \n\n\n"); })
-            .once()
-            .build());
-
-    //        .callback([mgr, notificationClass](InvocationContext& ctx) {
-    //            auto* genericNotificationBase = mgr->PopUpOnlyNotification(r::uobject::getStaticClassOf<UGenericNotification_TA>());
-    //            auto foo = r::uobject_utils::getFullName(toaster);
-    //            printf("  toast: %s\n", foo.c_str());
-    //            toaster->SetTitle(L'Foo');
-    //            toaster->SetBody(L'Body');
-    //            toaster->PopUpDuration = static_cast<float>(5);
-    //        })
-    //        .once()
-    //        .build());
-
-    //auto processEvent = resolve<ProcessEvent>();
-    //auto objectProvider = resolve<ObjectProvider>();
-
-    //auto* mgr = objectProvider->getInstanceOf<UNotificationManager_TA>();
-    //printf("  -> found: %s\n", mgr->GetFullName().c_str());
-
-    //printf("  finding \"Static\" class for UGenericNotification_TA\n");
-    //auto* notificationClass = objectProvider->classOf<UGenericNotification_TA>();
-    //printf("    -> notification class: %s\n", notificationClass->GetFullName().c_str());
-
-    //auto ret = static_cast<UNotification_TA*>(mgr->PopUpOnlyNotification(notificationClass));
-
-    //processInternal->registerTask(TaskBuilder()
-    //        .name("Toast")
-    //        .functionName("Function Engine.HUD.PostRender")
-    //        .phase(HookPhase::Pre)
-    //        .callback([mgr, notificationClass](InvocationContext& ctx) {
-    //            auto* genericNotificationBase = mgr->PopUpOnlyNotification(r::uobject::getStaticClassOf<UGenericNotification_TA>());
-    //            auto foo = r::uobject_utils::getFullName(toaster);
-    //            printf("  toast: %s\n", foo.c_str());
-    //            toaster->SetTitle(L'Foo');
-    //            toaster->SetBody(L'Body');
-    //            toaster->PopUpDuration = static_cast<float>(5);
-    //        })
-    //        .once()
-    //        .build());
 }
 
 auto AIM::registerPublicInterfaces() const -> std::vector<PublicInterface> {
