@@ -47,13 +47,7 @@ set(SOURCES
     main.cpp
     ${CMAKE_SOURCE_DIR}/../dispatch/Dispatch.cpp
     ${CMAKE_SOURCE_DIR}/../engine/EngineLocator.cpp
-    ${CMAKE_SOURCE_DIR}/../engine/EngineLocator.cpp
     ${CMAKE_SOURCE_DIR}/../engine/ObjectProvider.cpp
-    ${CMAKE_SOURCE_DIR}/../memory/PatchBuilder.cpp
-    ${CMAKE_SOURCE_DIR}/../memory/PatchManager.cpp
-    ${CMAKE_SOURCE_DIR}/../process/CallFunction.cpp
-    ${CMAKE_SOURCE_DIR}/../process/ProcessEvent.cpp
-    ${CMAKE_SOURCE_DIR}/../process/ProcessInternal.cpp
     ${CMAKE_SOURCE_DIR}/../task/TaskQueue.cpp
     ${CMAKE_SOURCE_DIR}/../model/UEModel.cpp
 )
