@@ -6,8 +6,6 @@ include("${DIALUP_INSTALL_DIR}/build-tools/GameBinaryDir.cmake")
 
 project(AIM VERSION 1.0 LANGUAGES CXX)
 
-#include("${DIALUP_DIR}/build-tools/GameBinaryDir.cmake")
-
 set(SOURCES
     ${CMAKE_SOURCE_DIR}/${PROJECT_NAME}.cpp
     ${CMAKE_SOURCE_DIR}/dispatch/Dispatch.cpp
