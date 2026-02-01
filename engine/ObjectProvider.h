@@ -23,7 +23,9 @@ class ObjectProvider : public IObjectProvider {
     AIM_INJECT(AsyncGate, asyncGate)
     AIM_INJECT(IRuntime, runtime)
 
-    ObjectProvider() = default;
+    ObjectProvider() {
+        buildClassNameCacheFromCDOs();
+    }
 
     struct TransparentStringHash {
         size_t operator()(const wchar_t*) const = delete;
