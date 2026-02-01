@@ -363,6 +363,7 @@ AIM::startup() {
             getLogger()->debug("AIM gate setReady()");
 
             setPluginReady();
+            testToast();
         });
     });
 
@@ -409,14 +410,57 @@ AIM::startup() {
 void AIM::testToast() {
     printf("inside test toast\n");
     auto processEvent = resolve<ProcessEvent>();
+    auto processInternal = resolve<ProcessInternal>();
     auto objectProvider = resolve<ObjectProvider>();
 
-    auto* mgr = objectProvider->getInstanceOf<UNotificationManager_TA>();
-    printf("  -> found: %s\n", mgr->GetFullName().c_str());
+    processEvent->registerTask(TaskBuilder()
+            .name("pi hud test")
+            .functionName("Function Engine.HUD.PostRender")
+            .phase(HookPhase::Post)
+            .callback([objectProvider](InvocationContext& ctx) {
+                printf("  finding transient UNotificationManager_TA\n");
+                auto* mgr = objectProvider->getInstanceOf<UNotificationManager_TA>();
+                printf("  -> found: %s\n", mgr->GetFullName().c_str());
 
-    printf("  finding \"Static\" class for UGenericNotification_TA\n");
-    auto* notificationClass = objectProvider->classOf<UGenericNotification_TA>();
-    printf("    -> notification class: %s\n", notificationClass->GetFullName().c_str());
+                printf("  finding \"Static\" class for UGenericNotification_TA\n");
+                auto* notificationClass = objectProvider->classOf<UGenericNotification_TA>();
+                printf("    -> notification class: %s\n", notificationClass->GetFullName().c_str());
+
+                UNotification_TA* ret = mgr->PopUpOnlyNotification(notificationClass);
+                ret->SetTitle(FString(L"Foo"));
+                ret->SetBody(FString(L"Foo"));
+                printf("\n  ret: %s\n", r::uobject_utils::getFullName(ret).c_str());
+            })
+            .once()
+            .build());
+
+    processInternal->registerTask(TaskBuilder()
+            .name("Test")
+            .phase(HookPhase::Execute)
+            .execute([]() { printf("\n\n\n execute \n\n\n"); })
+            .once()
+            .build());
+
+    //        .callback([mgr, notificationClass](InvocationContext& ctx) {
+    //            auto* genericNotificationBase = mgr->PopUpOnlyNotification(r::uobject::getStaticClassOf<UGenericNotification_TA>());
+    //            auto foo = r::uobject_utils::getFullName(toaster);
+    //            printf("  toast: %s\n", foo.c_str());
+    //            toaster->SetTitle(L'Foo');
+    //            toaster->SetBody(L'Body');
+    //            toaster->PopUpDuration = static_cast<float>(5);
+    //        })
+    //        .once()
+    //        .build());
+
+    //auto processEvent = resolve<ProcessEvent>();
+    //auto objectProvider = resolve<ObjectProvider>();
+
+    //auto* mgr = objectProvider->getInstanceOf<UNotificationManager_TA>();
+    //printf("  -> found: %s\n", mgr->GetFullName().c_str());
+
+    //printf("  finding \"Static\" class for UGenericNotification_TA\n");
+    //auto* notificationClass = objectProvider->classOf<UGenericNotification_TA>();
+    //printf("    -> notification class: %s\n", notificationClass->GetFullName().c_str());
 
     //auto ret = static_cast<UNotification_TA*>(mgr->PopUpOnlyNotification(notificationClass));
 
