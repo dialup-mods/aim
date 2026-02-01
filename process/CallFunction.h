@@ -51,19 +51,9 @@ class CallFunction : public ICallFunction {
     
     using tCallFunction = void(__thiscall*)(UObject* self, FFrame& stack, void* result, UFunction* fn);
 
-public:
     using BYTE = unsigned char;
     using PatternSpan = std::span<const BYTE>;
 
-private:
-    
-    // TODO / FIXME
-    // store weak ref to self
-    // use that in detour
-
-// clang-format off
-
-public:
     std::string getName() const { return "CallFunction"; } // clang-format off
     
     static CallFunction* instance_;
@@ -89,10 +79,12 @@ public:
     static inline void* cachedVTableFn_ = nullptr;
     
     static constexpr BYTE patternBytes_[] = {
-        // prologue (or jump when bakkes is running)
-        // 0x40, 0x55, 0x53, 0x56, 0x57,
-        0xE9, 0x00, 0x00, 0x00, 0x00,
+        // jmp when bakkesmod is running
+        // replaces prologue
+        // 0xE9, 0x00, 0x00, 0x00, 0x00,
 
+        // original prologue
+        0x40, 0x55, 0x53, 0x56, 0x57,
         // rest of pattern
         0x41, 0x54, 0x41, 0x55, 0x41, 0x56, 0x41, 0x57,
         0x48, 0x81, 0xEC, 0x00, 0x00, 0x00, 0x00, 0x48,

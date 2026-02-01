@@ -36,6 +36,10 @@ class Detour : public IModule {
         return true;
     }
 
+    bool detach() {
+        return detour_->unHook();
+    }
+
     void* getTrampoline() const { return (void*)trampoline_; }
 
 private:

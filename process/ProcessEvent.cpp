@@ -36,8 +36,6 @@ bool
 ProcessEvent::init() {
     log_->debug("[PE] init()");
 
-    //teardownFence_->block("PE");
-
     instance_ = this;
     mutex_->setName(getName() + "_Detour");
 
@@ -89,7 +87,7 @@ ProcessEvent::buildPatches() {
 //}
 
 void ProcessEvent::shutdown() {
-    dispatch_->shutdown();
+    removeDetour();
 }
 
 void ProcessEvent::registerTask(std::shared_ptr<TaskDefinition> def) {
@@ -148,6 +146,8 @@ void
 ProcessEvent::applyDetour() {
     log_->debug("[PE] applyDetour()");
 
+    teardownFence_->block("PE");
+
     if (!mutex_->tryAcquire(1/*ms*/)) {
         log_->warn("[PE] Already patched -- nothing to apply");
         return;
@@ -163,9 +163,17 @@ ProcessEvent::applyDetour() {
 void
 ProcessEvent::removeDetour() {
     log_->debug("[PE] removeDetour()");
+    dispatch_->shutdown();
     mutex_->release();
-    //teardownFence_->release("PE");
+    // wait for any in-flight handlers to finish
+    if (!mutex_->waitForUnlock(5000)) {
+        log_->error("Timeout waiting for ProcessEvent handlers to finish");
+        return;
+    }
+    detour_->detach();
     //removedGate_->setReady();
+    teardownFence_->release("PE");
+    std::this_thread::sleep_for(std::chrono::seconds(1));
 }
 
 bool ProcessEvent::waitForUnlock(DWORD timeoutMs) const {

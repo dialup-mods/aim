@@ -320,18 +320,21 @@ AIM::startup() {
     //static_assert(sizeof(FName) == 8, "bad FName");
     //static_assert(sizeof(FString) == 0x10, "bad FString");
     //static_assert(sizeof(TArray<void*>) == 0x10, "bad TArray");
-
     setStaticResolver(getResolver());
     registerModule(
         ModuleDefinition<PluginFence>()
             .named("ReadyFence")
             .asSingleton()
     );
+    registerModule(
+        ModuleDefinition<PluginFence>()
+            .named("ReadyDestroyFence")
+            .asSingleton()
+    );
     auto fence = resolve<PluginFence>("ReadyFence");
 
     //fence->block("CF");
-    fence->block("PI");
-    fence->block("PE");
+    //fence->block("PI");
 
     auto unrealReadyGate = std::make_shared<AsyncGate>();
     registerInstance<AsyncGate>(unrealReadyGate, "unreal-ready");
@@ -448,33 +451,36 @@ void
 AIM::shutdown() {
     auto log = resolve<ILogger>();
     log->debug("AIM::shutdown()");
+
+    auto teardownFence = resolve<PluginFence>("ReadyDestroyFence");
+
     auto pe = resolve<ProcessEvent>();
     auto pi = resolve<ProcessInternal>();
     auto cf = resolve<CallFunction>();
 
-    log->trace("gates");
     auto peGate = std::make_shared<AsyncGate>();
     auto piGate = std::make_shared<AsyncGate>();
     auto cfGate = std::make_shared<AsyncGate>();
 
-    log->trace("remove");
-    //removeDetour(cf, cfGate, log);
-    removeDetour(pi, piGate, log);
-    piGate->onReady([pe, peGate, log] {
-        removeDetour(pe, peGate, log);
-    });
-    //gateDestroy->setReady();
-    //log->debug("destroy gate setReady()");
-    staticResolver_ = nullptr;
+    log->trace("gates");
+    pi->removeDetour();
+    pe->removeDetour();
 
-    Runtime::yeet();
+    //removeDetour(cf, cfGate, log);
+    //removeDetour(pi, piGate, log);
+    //piGate->onReady([pe, peGate, log] {
+    //    removeDetour(pe, peGate, log);
+    //});
+
+    log->trace("remove");
+    teardownFence->onReady([this] {
+        printf("teardown ready\n");
+        staticResolver_ = nullptr;
+        Runtime::yeet();
+        setPluginYeetable();
+    });
 
     std::this_thread::sleep_for(std::chrono::seconds(1));
-
-//    fence->onReady([gate = getGateDestroy()] {
-//    });
-
-    setPluginYeetable();
 }
 //
 

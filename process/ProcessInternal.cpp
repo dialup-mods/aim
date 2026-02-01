@@ -1,4 +1,5 @@
 ﻿#include "ProcessInternal.h"
+#include "ProcessEvent.h"
 #include "AIM.h"
 
 #include "AsyncGate.h"
@@ -67,6 +68,9 @@ void ProcessInternal::clearTasks() {
 void
 ProcessInternal::applyDetour() {
     log_->debug("[PI] applyDetour()");
+
+    teardownFence_->block("PI");
+
     if (!mutex_->tryAcquire(1/*ms*/)) {
         log_->warn("[PI] Already patched -- nothing to apply");
         return;
@@ -97,29 +101,41 @@ ProcessInternal::applyDetour() {
 
 void ProcessInternal::removeDetour() {
     log_->debug("[PI] removeDetour()");
-    return;
+    dispatch_->shutdown();
+    mutex_->release();
+    // wait for any in-flight handlers to finish
+    if (!mutex_->waitForUnlock(5000)) {
+        log_->error("Timeout waiting for ProcessEvent handlers to finish");
+        return;
+    }
+    detour_->detach();
+    //removedGate_->setReady();
+    teardownFence_->release("PI");
+    std::this_thread::sleep_for(std::chrono::seconds(1));
 
     // run inside main event loop
     // to prevent race conditions
-//    processEvent_->registerTask(TaskBuilder()
-//            .name("[PI] Remove")
-//            .functionName("Function Engine.Interaction.Tick")
-//            .phase(HookPhase::Post)
-//            .callback([this](InvocationContext& ctx) {
-//                log_->debug("[PI] removing patch...\n");
-//
-//                if (mutex_->tryAcquire(1 /*ms*/)) {
-//                    log_->warn("[PI] Not detoured - nothing to remove");
-//                    mutex_->release();
-//                    removedGate_->setReady();
-//                    return;
-//                }
-//
-//                removedGate_->setReady();
-//                log_->debug("[PI] removed\n");
-//            })
-//            .once()
-//            .build());
+    //processEvent_->registerTask(TaskBuilder()
+    //        .name("[PI] Remove")
+    //        .functionName("Function Engine.Interaction.Tick")
+    //        .phase(HookPhase::Post)
+    //        .callback([this](InvocationContext& ctx) {
+    //            log_->debug("[PI] removing patch...\n");
+
+    //            if (mutex_->tryAcquire(1 /*ms*/)) {
+    //                log_->warn("[PI] Not detoured - nothing to remove");
+    //                mutex_->release();
+    //                removedGate_->setReady();
+    //                return;
+    //            }
+    //            detour_->detach();
+    //            mutex_->release();
+
+    //            removedGate_->setReady();
+    //            log_->debug("[PI] removed\n");
+    //        })
+    //        .once()
+    //        .build());
 }
 
 bool ProcessInternal::waitForUnlock(DWORD timeoutMs) const {

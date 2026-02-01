@@ -52,7 +52,6 @@ class ProcessEvent : public IProcessEvent {
 
     using tProcessEvent = void(__fastcall*)(UObject* self, UFunction* fn, void* params, void* result);
 
-public:
     using BYTE = unsigned char;
     using PatternSpan = std::span<const BYTE>;
 
@@ -66,6 +65,11 @@ public:
     void onDetoured(const std::function<void()>& callback) const {
         printf("ON DETOURED\n");
         return appliedGate_->onReady(callback);
+    }
+
+    void onDetourRemoved(const std::function<void()>& callback) const {
+        printf("ON DETOURED REMOVED\n");
+        return removedGate_->onReady(callback);
     }
 
     int  getVTableIndex()       const { return 67; }
