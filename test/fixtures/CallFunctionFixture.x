@@ -6,7 +6,6 @@
 #include "IRuntime.h"
 #include "MockLogger.h"
 #include "MutexGuard.h"
-#include "PatchManager.h"
 #include "CallFunction.h"
 #include "TaskQueue.h"
 
@@ -17,8 +16,6 @@ struct CallFunctionFixture {
         std::make_shared<Dispatch>();
     std::shared_ptr<TaskQueue> taskQueue =
         std::make_shared<TaskQueue>();
-    std::shared_ptr<PatchManager> patchManager =
-        std::make_shared<PatchManager>();
     std::shared_ptr<AsyncGate> appliedGate =
         std::make_shared<AsyncGate>();
     std::shared_ptr<AsyncGate> removedGate =
@@ -38,7 +35,6 @@ struct CallFunctionFixture {
         processInternal.__inject_log(logger);
         processInternal.__inject_dispatch(dispatch);
         processInternal.__inject_taskQueue(taskQueue);
-        processInternal.__inject_patchManager(patchManager);
         processInternal.__inject_appliedGate(appliedGate);
         processInternal.__inject_removedGate(removedGate);
         processInternal.__inject_readyFence(readyFence);

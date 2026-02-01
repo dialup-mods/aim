@@ -6,19 +6,16 @@
 #include "IRuntime.h"
 #include "MockLogger.h"
 #include "MutexGuard.h"
-#include "PatchManager.h"
-#include "ProcessInternal.h"
+#include "ProcessEvent.h"
 #include "TaskQueue.h"
 
-struct ProcessInternalFixture {
+struct ProcessEventFixture {
     std::shared_ptr<MockLogger> logger = std::make_shared<MockLogger>();
 
     std::shared_ptr<Dispatch> dispatch =
         std::make_shared<Dispatch>();
     std::shared_ptr<TaskQueue> taskQueue =
         std::make_shared<TaskQueue>();
-    std::shared_ptr<PatchManager> patchManager =
-        std::make_shared<PatchManager>();
     std::shared_ptr<AsyncGate> appliedGate =
         std::make_shared<AsyncGate>();
     std::shared_ptr<AsyncGate> removedGate =
@@ -32,21 +29,19 @@ struct ProcessInternalFixture {
 
     std::shared_ptr<IRuntime> runtime;
 
-    ProcessInternal processInternal;
+    ProcessEvent processEvent;
 
-    ProcessInternalFixture() {
-        processInternal.__inject_log(logger);
-        processInternal.__inject_dispatch(dispatch);
-        processInternal.__inject_taskQueue(taskQueue);
-        processInternal.__inject_patchManager(patchManager);
-        processInternal.__inject_appliedGate(appliedGate);
-        processInternal.__inject_removedGate(removedGate);
-        processInternal.__inject_readyFence(readyFence);
-        processInternal.__inject_teardownFence(teardownFence);
-        processInternal.__inject_mutex(mutex);
+    ProcessEventFixture() {
+        processEvent.__inject_log(logger);
+        processEvent.__inject_dispatch(dispatch);
+        processEvent.__inject_taskQueue(taskQueue);
+        processEvent.__inject_appliedGate(appliedGate);
+        processEvent.__inject_removedGate(removedGate);
+        processEvent.__inject_readyFence(readyFence);
+        processEvent.__inject_teardownFence(teardownFence);
+        processEvent.__inject_mutex(mutex);
 
     }
 
-    ~ProcessInternalFixture() = default;
-
+    ~ProcessEventFixture() = default;
 };

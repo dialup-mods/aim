@@ -4,9 +4,7 @@
 
 #include "Runtime.h"
 #include "SDK.h"
-#include "PatchManager.h"
 #include "CallFunction.h"
-#include "PatchBuilder.h"
 #include "PatchUtils.h"
 #include "ProcessEvent.h"
 namespace p = patchutils;
