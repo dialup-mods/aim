@@ -9,6 +9,7 @@
 #include "PatchBuilder.h"
 #include "PatchUtils.h"
 #include "ProcessEvent.h"
+namespace p = patchutils;
 
 #include "fixtures/ObjectProviderFixture.h"
 #include "fixtures/ProcessEventFixture.h"
@@ -40,7 +41,6 @@ public:
         __try {
             // ProcessEvent
             getRLFunc();
-            getBakkesTrampolineFn();
             buildPatches();
             applyDetour();
             removeDetour();
@@ -54,10 +54,10 @@ public:
         printf("  [PE] getRLFunc() ret: %p\n", ret);
     }
 
-    void getBakkesTrampolineFn() {
-        auto* ret = processEvent->processEvent.getRLFn();
-        printf("  [PE] getBakkesTrampolineFn() ret: %p\n", ret);
-    }
+    //void getBakkesTrampolineFn() {
+    //    auto* ret = processEvent->processEvent.getBakkesTrampolineFn();
+    //    printf("  [PE] getBakkesTrampolineFn() ret: %p\n", ret);
+    //}
 
     void buildPatches() {
         auto fn = reinterpret_cast<void**>(r::uclass::find("Class Core.Object")->VfTableObject.Ptr)[67];
@@ -65,30 +65,28 @@ public:
             printf("[PE] inaccessible memory\n");
             return;
         }
+        printf("  [PE] getRLFunc() ret: %p\n", fn);
 
-        PatchDefinition applyPatch_ = PatchBuilder()
-            .name("Process Event")
-            // create in reverse order
+        auto entry = p::resolveExecutableEntry(fn);
+        size_t boundary = p::findSafePatchBoundary(
+            reinterpret_cast<const uint8_t*>(entry),
+            5,
+            16
+        );
+        printf("boundary: %llu\n", boundary);
 
-            .setPosition(patchutils::ptr_to_uintptr(slack))
-
-            // capture and store bytes
-
+        PatchDefinition patch = PatchBuilder()
+            .name("Process Event - Detour")
             // vtable entry -> handle function
             .setPosition(patchutils::ptr_to_uintptr(fn))
-            .absoluteJump(patchutils::ptr_to_uintptr(&handleFunction))
-
+            .indirectJump(patchutils::ptr_to_uintptr(&handleFunction))
             .finalize();
 
         auto pm = PatchManager();
-        pm.apply(applyPatch_, true);
+        pm.apply(patch, true);
 
-        PatchDefinition removePatch_ = PatchBuilder()
-            .name("Process Event Remove")
+        pm.restore(patch, true);
 
-            // restore captured old bytes
-
-            .finalize();
     }
 
     void applyDetour() {

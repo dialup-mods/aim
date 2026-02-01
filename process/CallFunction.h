@@ -7,14 +7,12 @@
 #include "ICallFunction.h"
 #include "AsyncGate.h"
 #include "PluginFence.h"
-#include "PatchDefinition.h"
 #include "TaskStructs.h"
 
 using DWORD = unsigned long;
 class ILogger;
 class ObjectProvider;
 class Dispatch;
-class PatchManager;
 class TaskQueue;
 class PluginState;
 class ProcessInternal;
@@ -42,7 +40,6 @@ class CallFunction : public ICallFunction {
     AIM_INJECT(Dispatch, dispatch)
     AIM_INJECT(TaskQueue, taskQueue)
     AIM_INJECT(ObjectProvider, objectProvider)
-    AIM_INJECT(PatchManager, patchManager)
     AIM_INJECT(AsyncGate, appliedGate)
     AIM_INJECT(AsyncGate, removedGate)
     AIM_INJECT(MutexGuard, mutex)
@@ -82,8 +79,6 @@ public:
     bool shouldUseVTableEntry() const { return false; }
     bool shouldResolveJump()    const { return true; }
     
-    static inline PatchDefinition applyPatch_ {};
-    static inline PatchDefinition removePatch_ {};
     static inline std::shared_ptr<TaskDefinition> applyTask_ {};
     static inline std::shared_ptr<TaskDefinition> removeTask_ {};
     

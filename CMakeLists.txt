@@ -13,8 +13,6 @@ set(SOURCES
     ${CMAKE_SOURCE_DIR}/dispatch/Dispatch.cpp
     ${CMAKE_SOURCE_DIR}/engine/EngineLocator.cpp
     ${CMAKE_SOURCE_DIR}/engine/ObjectProvider.cpp
-    ${CMAKE_SOURCE_DIR}/memory/PatchBuilder.cpp
-    ${CMAKE_SOURCE_DIR}/memory/PatchManager.cpp
     ${CMAKE_SOURCE_DIR}/model/UEModel.cpp
     ${CMAKE_SOURCE_DIR}/process/CallFunction.cpp
     ${CMAKE_SOURCE_DIR}/process/ProcessEvent.cpp
@@ -75,6 +73,21 @@ install(FILES
 
 find_package(DialUp-SDK REQUIRED PATHS ${DIALUP_INSTALL_DIR}/sdk-plugin)
 target_link_libraries(${PROJECT_NAME} PRIVATE DialUp-SDK::DialUp-SDK)
+
+include(FetchContent)
+FetchContent_Declare(
+    PolyHook2
+    GIT_REPOSITORY https://github.com/stevemk14ebr/PolyHook_2_0.git
+    GIT_TAG master
+)
+set(POLYHOOK_BUILD_STATIC_RUNTIME OFF CACHE BOOL "" FORCE)
+FetchContent_MakeAvailable(PolyHook2)
+set_target_properties(PolyHook_2 PROPERTIES
+    MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>DLL"
+)
+target_link_libraries(${PROJECT_NAME} PRIVATE PolyHook_2)
+
+#target_include_directories(${PROJECT_NAME} PRIVATE ${polyhook2_SOURCE_DIR})
 
 #add_link_options(/DEBUG /INCREMENTAL:NO /OPT:REF /OPT:ICF)
 

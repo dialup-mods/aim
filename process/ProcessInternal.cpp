@@ -1,20 +1,20 @@
 ﻿#include "ProcessInternal.h"
 #include "AIM.h"
 
-#include "Resolver.h"
-
 #include "AsyncGate.h"
+#include "Detour.h"
 #include "Dispatch.h"
 #include "EventContext.h"
 #include "GameTypes.h" // for FFrame
 #include "ILogger.h"
 #include "MutexGuard.h"
 #include "ObjectProvider.h"
-#include "PatchBuilder.h"
-#include "PatchManager.h"
 #include "PatchUtils.h"
-#include "ProcessEvent.h"
+#include "Resolver.h"
+#include "Runtime.h"
 #include "TaskBuilder.h"
+
+using r = Runtime;
 
 class UObject;
 namespace p = patchutils;
@@ -28,103 +28,20 @@ ProcessInternal::init() {
     
     instance_ = this;
     mutex_->setName(getName() + "_Detour");
-
     findAddress();
-    buildPatches();
     applyDetour();
-
 }
 
-void
-ProcessInternal::findAddress() {
-    processEvent_->registerTask(TaskBuilder()
-            .name("[PI] Find")
-            .functionName("Function Engine.Interaction.Tick")
-            .phase(HookPhase::Gated)
-            .maxAttempts(100)
-            .timeoutSeconds(120.0f)
-            .preStep([this](InvocationContext& ctx) {
-                if (!ctx.function() || !ctx.function()->Func) {
-                    log_->debug("no ctx fn");
-                    return;
-                }
-
-                auto isValidAddr = [&](void* fn) -> bool {
-                    uintptr_t funcAddr = reinterpret_cast<uintptr_t>(fn);
-
-                    if (funcAddr < 0x10000 || funcAddr > 0x7FFFFFFFFFFF) {
-                        //log_->warn("[PI] function is outside valid range: 0x{:X}", funcAddr);
-                        log_->warn("[PI] function is outside valid range");
-                        return false;
-                    }
-                    if (!safe::memory::isAddressAccessible(fn, sizeof(void*))) {
-                        //log_->logf_debug("[PI] inaccessible memory: 0x{:X}", funcAddr);
-                        log_->warn("[PI] inaccessible memory");
-                        return false;
-                    }
-                    return true;
-                };
-
-                auto fn = ctx.function()->Func;
-                if (!isValidAddr(fn.Ptr)) {
-                    return;
-                }
-
-                auto chain = patchutils::walkTrampolineChain(fn.Ptr);
-
-                if (chain.size() < 2) {
-                    log_->error("[PE] Trampoline chain too short, expected at least 2 entries");
-                    MessageBoxA(nullptr, "trampoline too short", "()", MB_OK | MB_ICONERROR | MB_SYSTEMMODAL);
-                    return;
-                }
-
-                if (!isValidAddr(chain[1])) {
-                    return;
-                }
-
-                processInternalTargetFn_ = fn.Ptr;
-                bakkesTrampolineFn_ = chain[1];
-            })
-            .successCondition(
-                [this](InvocationContext& ctx) { return processInternalTargetFn_ != nullptr && bakkesTrampolineFn_ != nullptr; })
-            .onSuccessCallback([this]() {
-                printf("[PI] found address\n");
-                //this->applyDetour();
-            })
-            .onFailureCallback([] { MessageBoxA(nullptr, "failed to find address", "()", MB_OK | MB_ICONERROR | MB_SYSTEMMODAL); })
-            .build());
+void *ProcessInternal::findEnginePIAddress() {
+    auto* fn = r::ufunction::find("Function Engine.HUD.PostRender")->Func.Ptr;
+    printf(" found possible PI: %p\n", fn);
+    return fn;
 }
 
-void ProcessInternal::buildPatches() {
-    { // apply patch
-        slack_ = reinterpret_cast<void*>(reinterpret_cast<uint8_t*>(bakkesTrampolineFn_) + 0x20);
-
-        applyPatch_ = PatchBuilder()
-            .name("Process Internal")
-
-            // slack -> handle
-            .setPosition(p::ptr_to_uintptr(slack_))
-            .absoluteJump(p::ptr_to_uintptr(&handleFunction))
-
-            // rl function -> slack
-            .setPosition(p::ptr_to_uintptr(processInternalTargetFn_))
-            .shortJump(p::ptr_to_uintptr(slack_))
-
-            .finalize();
-    }
-    {   // remove patch
-        // WARNING
-        // do not run deferred without delaying PE's unpatch
-        // this gets called on the next tick and PE's gone
-        log_->debug("[PI] buildRemovePatch()");
-
-        removePatch_ = PatchBuilder()
-            .name("Process Internal Remove")
-            .setPosition(p::ptr_to_uintptr(processInternalTargetFn_))
-            .shortJump(p::ptr_to_uintptr(bakkesTrampolineFn_))
-            .finalize();
-    }
-
+void* ProcessInternal::findAddress() {
+    auto fn = r::ufunction::find("Function Engine.HUD.PostRender")->Func.Ptr;
+    printf(" found possible PI: %p\n", fn);
+    return fn;
 }
 
 //auto ProcessInternal::getDispatchShutdownGate() -> AsyncGate* {
@@ -150,56 +67,59 @@ void ProcessInternal::clearTasks() {
 void
 ProcessInternal::applyDetour() {
     log_->debug("[PI] applyDetour()");
+    if (!mutex_->tryAcquire(1/*ms*/)) {
+        log_->warn("[PI] Already patched -- nothing to apply");
+        return;
+    }
 
+    log_->debug("[PI] applying detour at: {}", findAddress());
+    detour_->attach(findAddress(), (void*)&handleFunction);
 
-    //log_->logf_debug("[PI] target:     0x{:X}", p::ptr_to_uintptr(processInternalTargetFn_));
-    //log_->logf_debug("[PI] trampoline: 0x{:X}", p::ptr_to_uintptr(bakkesTrampolineFn_));
-    //log_->logf_debug("[PI] slack:      0x{:X}", p::ptr_to_uintptr(slack_));
-    //log_->logf_debug("[PI] detour:     0x{:X}", p::ptr_to_uintptr(&handleFunction));
+    log_->debug("[PI] detoured");
+    appliedGate_->setReady();
 
     // run inside main event loop
     // to prevent race conditions
-    processEvent_->registerTask(TaskBuilder()
-            .name("Apply ProcessInternal patch")
-            .functionName("Function Engine.Interaction.Tick")
-            .phase(HookPhase::Post)
-            .callback([this](InvocationContext& ctx) {
-                log_->debug("[PI] applying detour...");
+    //processEvent_->registerTask(TaskBuilder()
+    //        .name("Apply ProcessInternal patch")
+    //        .functionName("Function Engine.Interaction.Tick")
+    //        .phase(HookPhase::Post)
+    //        .callback([this](InvocationContext& ctx) {
+    //            log_->debug("[PI] applying detour at: {}", findAddress());
+    //            detour_->attach(findAddress(), (void*)&handleFunction);
 
-                if (!mutex_->tryAcquire(1 /*ms*/)) {
-                    log_->warn("[PI] Already patched -- nothing to apply");
-                    return;
-                }
-
-                auto pm = PatchManager();
-                pm.apply(applyPatch_);
-
-                appliedGate_->setReady();
-            })
-            .once()
-            .build());
+    //            log_->debug("[PI] detoured");
+    //            appliedGate_->setReady();
+    //        })
+    //        .once()
+    //        .build());
 }
 
 void ProcessInternal::removeDetour() {
+    log_->debug("[PI] removeDetour()");
+    return;
+
     // run inside main event loop
     // to prevent race conditions
-    return;
-    processEvent_->registerTask(TaskBuilder()
-            .name("[PI] Remove")
-            .functionName("Function Engine.Interaction.Tick")
-            .phase(HookPhase::Post)
-            .callback([this](InvocationContext& ctx) {
-                log_->debug("[PI] removing patch...\n");
-
-                auto pm = PatchManager();
-                pm.apply(removePatch_);
-                mutex_->release();
-                removedGate_->setReady();
-
-                log_->debug("[PI] removed\n");
-            })
-            .once()
-            .build());
+//    processEvent_->registerTask(TaskBuilder()
+//            .name("[PI] Remove")
+//            .functionName("Function Engine.Interaction.Tick")
+//            .phase(HookPhase::Post)
+//            .callback([this](InvocationContext& ctx) {
+//                log_->debug("[PI] removing patch...\n");
+//
+//                if (mutex_->tryAcquire(1 /*ms*/)) {
+//                    log_->warn("[PI] Not detoured - nothing to remove");
+//                    mutex_->release();
+//                    removedGate_->setReady();
+//                    return;
+//                }
+//
+//                removedGate_->setReady();
+//                log_->debug("[PI] removed\n");
+//            })
+//            .once()
+//            .build());
 }
 
 bool ProcessInternal::waitForUnlock(DWORD timeoutMs) const {
@@ -213,16 +133,24 @@ bool ProcessInternal::fastIsAcquired() {
     return false;
 }
 
+void* ProcessInternal::getTrampoline() {
+    if (instance_ && instance_->detour_->getTrampoline()) {
+        return instance_->detour_->getTrampoline();
+    }
+    return nullptr;
+}
+
 void __fastcall ProcessInternal::handleFunction(UObject* self, FFrame& stack, void* result) {
     if (!fastIsAcquired()) {
-        reinterpret_cast<tProcessInternal>(bakkesTrampolineFn_)(self, stack, result);
+        reinterpret_cast<tProcessInternal>(getTrampoline())(self, stack, result);
         return;
     }
 
-    auto log = AIM::getStaticResolver()->resolve<ILogger>();
-    
-    //if (log && self && self->GetFullName().find("SetString") != std::string::npos) {
-    //    log->logf_debug("[CF] {:s} -> {:d}", self->GetFullName(), self->ObjectInternalInteger);
+    if(self && self->GetFullName().find("Chat") != std::string::npos) {
+        printf("[PI] %s -> %d\n", self->GetFullName().c_str(), self->ObjectInternalInteger);
+    }
+    //if (log && self && self->GetFullName().find("a") != std::string::npos) {
+    //    printf("[PI] %s -> %d\n", self->GetFullName().c_str(), self->ObjectInternalInteger);
     //}
 
     auto dispatch = AIM::getStaticResolver()->resolve<Dispatch>("PI-Dispatch");
@@ -237,7 +165,7 @@ void __fastcall ProcessInternal::handleFunction(UObject* self, FFrame& stack, vo
         }
 
         // call original function
-        reinterpret_cast<tProcessInternal>(bakkesTrampolineFn_)(self, stack, result);
+        reinterpret_cast<tProcessInternal>(getTrampoline())(self, stack, result);
 
         // run posthooks
         context = InvocationContext::makeProcessInternalContext(self, stack, result);
@@ -245,7 +173,7 @@ void __fastcall ProcessInternal::handleFunction(UObject* self, FFrame& stack, vo
         
         dispatch->dispatchGated(self->ObjectInternalInteger, context);
     } else {
-        reinterpret_cast<tProcessInternal>(bakkesTrampolineFn_)(self, stack, result);
+        reinterpret_cast<tProcessInternal>(getTrampoline())(self, stack, result);
     }
 
     //if(self && self->GetFullName().find("Chat") != std::string::npos) {

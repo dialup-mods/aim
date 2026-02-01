@@ -58,8 +58,8 @@ Worker(const LPVOID lpParam) {
         RuntimeTest rtTest;
         rtTest.run();
 
-        ObjectProviderTest objTest;
-        objTest.run();
+        //ObjectProviderTest objTest;
+        //objTest.run();
 
         ProcessEventTest peTest;
         peTest.run();

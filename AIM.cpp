@@ -7,12 +7,12 @@
 #include "AsyncGate.h"
 #include "Dispatch.h"
 #include "ILogger.h"
+#include "Detour.h"
 
 #include "TaskBuilder.h"
 #include "v1/ITaskBuilder.h"
 
 #include "ModuleLoader.h"
-#include "PatchManager.h"
 #include "TaskQueue.h"
 // #include "ConsoleInterpreter.h"
 #include "EngineLocator.h"
@@ -32,8 +32,7 @@
 #include "IProcessInternal.h"
 #include "Toaster.h"
 
-// needed for detoured functions
-Resolver* AIM::staticResolver_;
+Resolver* AIM::staticResolver_ = nullptr;
 
 auto
 AIM::modal() -> const char* {
@@ -124,10 +123,6 @@ bool AIM::registerFunctionModuleDependencies(const std::string& prefix) {
 
 //    stateObj->setStatus(PluginRunStatus::Initializing);
 
-    std::string taskQueueName     = prefix + "-TaskQueue";
-    std::string dispatchName      = prefix + "-Dispatch";
-    std::string patchManagerName  = prefix + "-PatchManager";
-
     registerModule(
         ModuleDefinition<AsyncGate>()
             .named(prefix + "-AsyncGate")
@@ -166,23 +161,24 @@ bool AIM::registerFunctionModuleDependencies(const std::string& prefix) {
 
     registerModule(
         ModuleDefinition<TaskQueue>()
-            .named(taskQueueName)
+            .named(prefix + "-TaskQueue")
             .withDependency(&TaskQueue::__inject_log, "[default]")
             .asSingleton()
     );
 
     registerModule(
         ModuleDefinition<Dispatch>()
-            .named(dispatchName)
+            .named(prefix + "-Dispatch")
             .withDependency(&Dispatch::__inject_log, "[default]")
             .withDependency(&Dispatch::__inject_objectProvider, "[default]")
-            .withDependency(&Dispatch::__inject_taskQueue, taskQueueName)
+            .withDependency(&Dispatch::__inject_taskQueue, prefix + "-TaskQueue")
             .asSingleton()
     );
 
     registerModule(
-        ModuleDefinition<PatchManager>()
-            .named(patchManagerName)
+        ModuleDefinition<Detour>()
+            .named(prefix + "-Detour")
+            .withDependency(&Detour::__inject_log, "[default]")
             .asSingleton()
     );
 
@@ -209,12 +205,12 @@ AIM::loadDetourModules() {
             .withDependency(&ProcessEvent::__inject_log, "[default]")
             .withDependency(&ProcessEvent::__inject_taskQueue, "PE-TaskQueue")
             .withDependency(&ProcessEvent::__inject_dispatch, "PE-Dispatch")
-            .withDependency(&ProcessEvent::__inject_patchManager, "PE-PatchManager")
             .withDependency(&ProcessEvent::__inject_mutex, "PE-Mutex")
             .withDependency(&ProcessEvent::__inject_appliedGate, "PE-AsyncGate")
             .withDependency(&ProcessEvent::__inject_removedGate, "PE-AsyncGate-Remove")
             .withDependency(&ProcessEvent::__inject_readyFence, "ReadyFence") // shared fence for all processes
             .withDependency(&ProcessEvent::__inject_teardownFence, "ReadyDestroyFence") // shared fence for all processes
+            .withDependency(&ProcessEvent::__inject_detour, "PE-Detour")
             .asSingleton()
     );
 
@@ -224,13 +220,13 @@ AIM::loadDetourModules() {
             .withDependency(&ProcessInternal::__inject_log, "[default]")
             .withDependency(&ProcessInternal::__inject_taskQueue, "PI-TaskQueue")
             .withDependency(&ProcessInternal::__inject_dispatch, "PI-Dispatch")
-            .withDependency(&ProcessInternal::__inject_patchManager, "PI-PatchManager")
             .withDependency(&ProcessInternal::__inject_mutex, "PI-Mutex")
             .withDependency(&ProcessInternal::__inject_appliedGate, "PI-AsyncGate")
             .withDependency(&ProcessInternal::__inject_removedGate, "PI-AsyncGate-Remove")
             .withDependency(&ProcessInternal::__inject_processEvent, "[default]")
             .withDependency(&ProcessInternal::__inject_readyFence, "ReadyFence") // shared fence for all processes
             .withDependency(&ProcessInternal::__inject_teardownFence, "ReadyDestroyFence") // shared fence for all processes
+            .withDependency(&ProcessInternal::__inject_detour, "PI-Detour")
             .asSingleton()
     );
 
@@ -240,7 +236,6 @@ AIM::loadDetourModules() {
             .withDependency(&CallFunction::__inject_log, "[default]")
             .withDependency(&CallFunction::__inject_dispatch, "CF-Dispatch")
             .withDependency(&CallFunction::__inject_taskQueue, "CF-TaskQueue")
-            .withDependency(&CallFunction::__inject_patchManager, "CF-PatchManager")
             .withDependency(&CallFunction::__inject_mutex, "CF-Mutex")
             .withDependency(&CallFunction::__inject_appliedGate, "CF-AsyncGate")
             .withDependency(&CallFunction::__inject_removedGate, "CF-AsyncGate-Remove")
@@ -257,9 +252,9 @@ AIM::loadDetourModules() {
 
     pe->init();
 
-    pe->onDetoured([log = getLogger()] {
+    pe->onDetoured([pi, log = getLogger()] {
         log->debug("ProcessEvent is detoured, loading PI...");
-        //pi->init();
+        pi->init();
     });
 
     //registerModule(
@@ -335,7 +330,7 @@ AIM::startup() {
     auto fence = resolve<PluginFence>("ReadyFence");
 
     //fence->block("CF");
-    //fence->block("PI");
+    fence->block("PI");
     fence->block("PE");
 
     auto unrealReadyGate = std::make_shared<AsyncGate>();
@@ -357,13 +352,12 @@ AIM::startup() {
         //
         std::vector<AsyncGate*> processGates;
         processGates.emplace_back(getResolver()->resolve<AsyncGate>("PE-AsyncGate").get());
-        //processGates.emplace_back(getResolver()->resolve<AsyncGate>("PI-AsyncGate"));
-        //processGates.emplace_back(getResolver()->resolve<AsyncGate>("CF-AsyncGate"));
+        processGates.emplace_back(getResolver()->resolve<AsyncGate>("PI-AsyncGate").get());
+        //processGates.emplace_back(getResolver()->resolve<AsyncGate>("CF-AsyncGate").get());
 
         AsyncGate::onAllReady(processGates, [this] {
             getLogger()->debug("AIM::init() processGates ready");
             getLogger()->debug("AIM gate setReady()");
-        //    getGateReady()->setReady();
 
             setPluginReady();
         });
@@ -376,7 +370,7 @@ AIM::startup() {
 //    registerInstance<IObjectProvider>(iface);
 
 
-    testToast();
+    //testToast();
 }
 
 //template <typename T>
@@ -414,23 +408,29 @@ void AIM::testToast() {
     auto processEvent = resolve<ProcessEvent>();
     auto objectProvider = resolve<ObjectProvider>();
 
-    processEvent->registerTask(TaskBuilder()
-            .name("Toast")
-            .functionName("Function Engine.Interaction.Tick")
-            .phase(HookPhase::Post)
-            .callback([objectProvider](InvocationContext& ctx) {
-//                auto* mgr = getInstanceOf<UNotificationManager_TA>();
-//                auto name = r::uobject_utils::getFullName(mgr);
-//                auto* genericNotificationBase = mgr->PopUpOnlyNotification(r::uobject::getStaticClassOf<UGenericNotification_TA>());
-                //auto foo = r::uobject_utils::getFullName(toaster);
-                //printf("  toast: %s\n", foo.c_str());
-                //toaster->SetTitle(L'Foo');
-                //toaster->SetBody(L'Body');
-                //toaster->PopUpDuration = static_cast<float>(5);
+    auto* mgr = objectProvider->getInstanceOf<UNotificationManager_TA>();
+    printf("  -> found: %s\n", mgr->GetFullName().c_str());
 
-            })
-            .once()
-            .build());
+    printf("  finding \"Static\" class for UGenericNotification_TA\n");
+    auto* notificationClass = objectProvider->classOf<UGenericNotification_TA>();
+    printf("    -> notification class: %s\n", notificationClass->GetFullName().c_str());
+
+    //auto ret = static_cast<UNotification_TA*>(mgr->PopUpOnlyNotification(notificationClass));
+
+    //processInternal->registerTask(TaskBuilder()
+    //        .name("Toast")
+    //        .functionName("Function Engine.HUD.PostRender")
+    //        .phase(HookPhase::Pre)
+    //        .callback([mgr, notificationClass](InvocationContext& ctx) {
+    //            auto* genericNotificationBase = mgr->PopUpOnlyNotification(r::uobject::getStaticClassOf<UGenericNotification_TA>());
+    //            auto foo = r::uobject_utils::getFullName(toaster);
+    //            printf("  toast: %s\n", foo.c_str());
+    //            toaster->SetTitle(L'Foo');
+    //            toaster->SetBody(L'Body');
+    //            toaster->PopUpDuration = static_cast<float>(5);
+    //        })
+    //        .once()
+    //        .build());
 }
 
 auto AIM::registerPublicInterfaces() const -> std::vector<PublicInterface> {
@@ -459,7 +459,10 @@ AIM::shutdown() {
 
     log->trace("remove");
     //removeDetour(cf, cfGate, log);
-    removeDetour(pe, peGate, log);
+    removeDetour(pi, piGate, log);
+    piGate->onReady([pe, peGate, log] {
+        removeDetour(pe, peGate, log);
+    });
     //gateDestroy->setReady();
     //log->debug("destroy gate setReady()");
     staticResolver_ = nullptr;
@@ -471,9 +474,6 @@ AIM::shutdown() {
 //    fence->onReady([gate = getGateDestroy()] {
 //    });
 
-//    piGate->onReady([pe, peGate, log] {
-//        removeDetour(pe, peGate, log);
-//    });
     setPluginYeetable();
 }
 //

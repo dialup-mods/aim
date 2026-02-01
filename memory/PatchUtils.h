@@ -235,22 +235,22 @@ namespace patchutils {
 
         size_t offset = 0;
         while (offset < maxBytes) {
-            size_t remaining = maxBytes - offset;
-            Instruction insn = disassembleOneInstruction(code + offset, remaining);
+            const size_t remaining = maxBytes - offset;
+            auto instruction = disassembleOneInstruction(code + offset, remaining);
 
             printf("%p: %-6s %-12s (%zu byte%s)\n",
                    static_cast<const void*>(code + offset),
-                   insn.mnemonic,
-                   insn.operands,
-                   insn.length,
-                   insn.length != 1 ? "s" : "");
+                   instruction.mnemonic,
+                   instruction.operands,
+                   instruction.length,
+                   instruction.length != 1 ? "s" : "");
 
-            if (insn.length == 0 || insn.length > remaining) {
+            if (instruction.length == 0 || instruction.length > remaining) {
                 printf("<invalid instruction detected, stopping>\n");
                 break;
             }
 
-            offset += insn.length;
+            offset += instruction.length;
             if (offset >= maxBytes) { break; }
         }
     }
@@ -264,8 +264,14 @@ namespace patchutils {
         return forged;
     }
 
+    inline void
+    writeMemory(const uintptr_t address, const void* data, size_t size) {
+        if (size == 0) return;
+        std::memcpy(reinterpret_cast<void*>(address), data, size);
+    }
+
     inline size_t
-    findSafePatchBoundary(const uint8_t* code, size_t minSize, size_t maxBytes) {
+    findSafePatchBoundary(const uint8_t* code, const size_t minSize, const size_t maxBytes) {
         if (!safe::memory::isAddressAccessible(code, minSize)) {
             return 0;
         }
@@ -387,60 +393,11 @@ namespace patchutils {
         MessageBoxA(nullptr, buffer, "Memory Address", MB_OK | MB_ICONINFORMATION);
     }
 
-    inline uint8_t* allocateBuildTrampolines(void* inPtr, void* outPtr) {
-        constexpr size_t TRAMPOLINE_SIZE = 512;
-        const size_t TOTAL_SIZE = TRAMPOLINE_SIZE + 2 * PAGE_SIZE;
-
-        // 1. Allocate
-        void* basePtr = VirtualAlloc(nullptr, TRAMPOLINE_SIZE,
-                                    MEM_COMMIT|MEM_RESERVE,
-                                    PAGE_READWRITE);
-        if (!basePtr) return nullptr;
-
-        auto* trampInPtr = static_cast<uint8_t *>(basePtr); // + PAGE_SIZE;
-        uint8_t* trampOutPtr = trampInPtr + 256;
-    //    uint8_t* frontGuard = (uint8_t*)basePtr;
-    //    uint8_t* rearGuard = (uint8_t*)basePtr + PAGE_SIZE + TRAMPOLINE_SIZE;
-        showAddressMessage("new is updated", basePtr);
-
-        showAddressMessage("trampoline-In Src", trampInPtr);
-        showAddressMessage("trampoline-Out Src", trampOutPtr);
-        showAddressMessage("trampoline-In Dest", inPtr);
-        showAddressMessage("trampoline-Out Dest", outPtr);
-
-    //    MessageBoxA(nullptr, "before fill", "", MB_OK | MB_ICONINFORMATION | MB_SYSTEMMODAL);
-    //    // Fill with INT3 (0xCC) before use to detect premature execution
-    //    memset(trampInPtr, 0xCC, TRAMPOLINE_SIZE);
-
-        MessageBoxA(nullptr, "before write replay trampoline", "", MB_OK | MB_ICONINFORMATION | MB_SYSTEMMODAL);
-        writeTrampolineThatReplaysRegisters(trampOutPtr, outPtr);
-        MessageBoxA(nullptr, "after write replay trampoline", "", MB_OK | MB_ICONINFORMATION | MB_SYSTEMMODAL);
-
-        MessageBoxA(nullptr, "before write save trampoline", "", MB_OK | MB_ICONINFORMATION | MB_SYSTEMMODAL);
-        writeTrampolineThatSaveRegisters(trampInPtr, inPtr);
-        MessageBoxA(nullptr, "after write save trampoline", "", MB_OK | MB_ICONINFORMATION | MB_SYSTEMMODAL);
-
-        // 2. Flush instruction cache (important for multi-core systems)
-        FlushInstructionCache(GetCurrentProcess(), basePtr, TOTAL_SIZE);
-        MessageBoxA(nullptr, "after flush", "", MB_OK | MB_ICONINFORMATION | MB_SYSTEMMODAL);
-
-        // 5. ONLY NOW set up guards
-        DWORD oldProtect;
-    //    VirtualProtect(frontGuard, PAGE_SIZE, PAGE_NOACCESS, &oldProtect);
-    //    VirtualProtect(rearGuard, PAGE_SIZE, PAGE_NOACCESS, &oldProtect);
-
-        // 6. Make usable region executable
-        VirtualProtect(trampInPtr, TRAMPOLINE_SIZE, PAGE_EXECUTE_READ, &oldProtect);
-
-
-        return trampInPtr;
-    }
-
     inline void dumpMemoryBytes(void* addr, size_t numBytes) {
         auto* p = (uint8_t*)addr;
         for (size_t i = 0; i < numBytes; ++i) {
             //if (i % 8 == 0) log_->debug(""); // new line every 8 bytes
-            //log_->logf_debug("{:02X} ", p[i]);
+            printf("{%hhu} ", p[i]);
         }
     }
 
@@ -485,13 +442,13 @@ namespace patchutils {
     }
 
     inline bool
-    isShortJumpTo(uintptr_t from, uintptr_t expectedTo) {
+    isShortJumpTo(const uintptr_t from, uintptr_t expectedTo) {
         void* actual = patchutils::resolveRel32Jmp(reinterpret_cast<void*>(from));
         return reinterpret_cast<uintptr_t>(actual) == expectedTo;
     }
 
     inline bool
-    isAbsoluteJumpTo(uintptr_t from, uintptr_t expectedTo) {
+    isAbsoluteJumpTo(const uintptr_t from, uintptr_t expectedTo) {
         // Instruction format:
         // 48 B8 <8-byte-addr>    → mov rax, <addr>
         // FF E0                 → jmp rax
@@ -500,7 +457,7 @@ namespace patchutils {
         if (ptr[0] != 0x48 || ptr[1] != 0xB8)
             return false;
 
-        uintptr_t actualTarget = *reinterpret_cast<uintptr_t*>(ptr + 2);
+        const uintptr_t actualTarget = *reinterpret_cast<uintptr_t*>(ptr + 2);
 
         if (ptr[10] != 0xFF || ptr[11] != 0xE0)
             return false;
@@ -510,7 +467,7 @@ namespace patchutils {
 
     inline std::vector<uint8_t>
     forgeShortJumpBytes(uintptr_t from, uintptr_t to) {
-        auto relOffset = static_cast<intptr_t>(to - (from + 5));
+        const auto relOffset = static_cast<intptr_t>(to - (from + 5));
 
         // rel32 must be in range [-2^31, 2^31 - 1]
         if (relOffset < INT32_MIN || relOffset > INT32_MAX) {
@@ -586,55 +543,58 @@ namespace patchutils {
     }
 
     inline std::vector<void*>
-    walkTrampolineChain(void* startPtr, int maxDepth = 8) {
+walkTrampolineChain(void* startPtr, int maxDepth = 8) {
         std::vector<void*> chain;
         if (!startPtr) return chain;
 
-        chain.push_back(startPtr);
         void* current = startPtr;
 
         for (int i = 0; i < maxDepth && current; ++i) {
-            BYTE* b = reinterpret_cast<BYTE*>(current);
+            chain.push_back(current);  // Push BEFORE following jump
 
+            BYTE* b = reinterpret_cast<BYTE*>(current);
             BYTE firstByte;
             if (!s::readPtrSafe(b, firstByte)) {
                 break;
             }
+
+            void* next = nullptr;
 
             if (firstByte == 0xE9) { // JMP rel32
                 int32_t rel;
                 if (!s::readPtrSafe(b + 1, rel)) {
                     break;
                 }
-
-                current = b + 5 + rel;
+                next = b + 5 + rel;
             }
             else if (firstByte == 0xFF) {
                 BYTE secondByte;
                 if (!s::readPtrSafe(b + 1, secondByte) || secondByte != 0x25) {
                     break;
                 }
-
                 int32_t relativeOffset;
                 if (!s::readPtrSafe(b + 2, relativeOffset)) {
                     break;
                 }
-
                 void** ptr = reinterpret_cast<void**>(b + 6 + relativeOffset);
-                current = s::derefVoidPtrSafe(ptr);
-
-                if (!current) {
-                    break;
-                }
+                next = s::derefVoidPtrSafe(ptr);
             }
             else {
-                break; // not a jmp, we've hit the end of the chain
+                // Not a jump - this is the real function
+                break;
             }
 
-            chain.push_back(current);
+            if (!next) break;
+            current = next;
         }
 
         return chain;
+    }
+
+    inline void*
+    resolveExecutableEntry(void* startPtr, const int maxDepth = 8) {
+        // fixme, assert not jmp instruction
+        return walkTrampolineChain(startPtr, maxDepth).back();
     }
 
     inline void
@@ -651,6 +611,38 @@ namespace patchutils {
 
         trampolinePtr += 10; // Instruction is now 10 bytes (2 + 8)
     }
+
+    //void PatchBuilder::replayBytesWithRelocation() {
+    //    uintptr_t originalPos = /* where bytes were captured from */;
+    //    uintptr_t newPos = currentPosition;
+
+    //    for (size_t i = 0; i < capturedBytes.size(); ) {
+    //        uint8_t* instr = &capturedBytes[i];
+    //        size_t len = getInstructionLength(instr);
+
+    //        if (instr[0] == 0xE9) {  // near jump
+    //            // Copy opcode
+    //            emitByte(0xE9);
+
+    //            // Fix up offset
+    //            int32_t oldOffset = *reinterpret_cast<int32_t*>(instr + 1);
+    //            uintptr_t oldTarget = originalPos + i + 5 + oldOffset;
+    //            int32_t newOffset = oldTarget - (newPos + 5);
+    //            emitDword(newOffset);
+    //        }
+    //        else if (/* other RIP-relative patterns */) {
+    //            // Handle LEA, MOV, etc with RIP-relative addressing
+    //        }
+    //        else {
+    //            // Copy instruction as-is
+    //            for (size_t j = 0; j < len; j++) {
+    //                emitByte(instr[j]);
+    //            }
+    //        }
+
+    //        i += len;
+    //    }
+    //}
 
     // deobfuscatePointer:
     // usage:
@@ -675,7 +667,7 @@ namespace patchutils {
     // Ideally call this inside your ProcessEvent / ProcessInternal / CallFunction hook,
     // or immediately around there.
     inline uintptr_t
-    deobfuscatePointer(uintptr_t obfuscated, const uintptr_t framePointer) {
+    deobfuscatePointer(const uintptr_t obfuscated, const uintptr_t framePointer) {
         return obfuscated ^ framePointer;
     }
 
@@ -710,7 +702,7 @@ namespace patchutils {
             if (memcmp(regionStart + i, pattern, patternSize) == 0) {
                 // Found potential match
                 const int32_t ripOffset = *reinterpret_cast<int32_t*>(regionStart + i + 3);
-                auto addressOfPtr = reinterpret_cast<uintptr_t>(regionStart + i + patternSize + 4 + ripOffset);
+                const auto addressOfPtr = reinterpret_cast<uintptr_t>(regionStart + i + patternSize + 4 + ripOffset);
                 return reinterpret_cast<uintptr_t*>(addressOfPtr);
             }
         }
@@ -719,9 +711,9 @@ namespace patchutils {
     }
 
     inline uintptr_t
-    findRetInstruction(uintptr_t address, size_t maxSearch = 512) {
+    findRetInstruction(const uintptr_t address, const size_t maxSearch = 512) {
         for (size_t i = 0; i < maxSearch; ++i) {
-            uint8_t byte = *reinterpret_cast<uint8_t*>(address + i);
+            const auto byte = *reinterpret_cast<uint8_t*>(address + i);
             if (byte == 0xC3) {
                 return address + i;
             }
@@ -730,31 +722,31 @@ namespace patchutils {
     }
 
     inline size_t
-    getFunctionSizeByRet(uintptr_t functionStart, size_t maxSearch = 512) {
+    getFunctionSizeByRet(const uintptr_t functionStart, const size_t maxSearch = 512) {
         const auto* code = reinterpret_cast<const uint8_t*>(functionStart);
         size_t offset = 0;
 
         while (offset < maxSearch) {
-            size_t remaining = maxSearch - offset;
-            Instruction insn = disassembleOneInstruction(code + offset, remaining);
+            const size_t remaining = maxSearch - offset;
+            const auto instruction = disassembleOneInstruction(code + offset, remaining);
 
-            if (insn.length == 0 || insn.length > remaining) {
+            if (instruction.length == 0 || instruction.length > remaining) {
                 break;
             }
 
             // Check for RET
-            if (strncmp(insn.mnemonic, "ret", 3) == 0) {
-                return offset + insn.length;
+            if (strncmp(instruction.mnemonic, "ret", 3) == 0) {
+                return offset + instruction.length;
             }
 
-            offset += insn.length;
+            offset += instruction.length;
         }
 
         return 0;
     }
 
     inline bool
-    isReadable(uintptr_t address, size_t size = 1) {
+    isReadable(const uintptr_t address, const size_t size = 1) {
         MEMORY_BASIC_INFORMATION mbi;
         if (!VirtualQuery(reinterpret_cast<LPCVOID>(address), &mbi, sizeof(mbi))) {
             return false;
@@ -781,7 +773,7 @@ namespace patchutils {
     }
 
     inline std::vector<uint8_t>
-    getBytes(uintptr_t addr, size_t size) {
+    getBytes(const uintptr_t addr, const size_t size) {
         const auto* src = reinterpret_cast<const uint8_t*>(addr);
         return std::vector<uint8_t>(src, src + size);
     }
@@ -833,5 +825,73 @@ namespace patchutils {
 
         // target address (absolute)
         memcpy(cursor, &target, 8);
+    }
+
+    inline void writeIndirectJump(void* from, void* to) {
+        uint8_t* ptr = static_cast<uint8_t*>(from);
+
+        DWORD oldProtect;
+        VirtualProtect(ptr, 14, PAGE_EXECUTE_READWRITE, &oldProtect);
+
+        ptr[0] = 0xFF;
+        ptr[1] = 0x25;
+        *(int32_t*)(ptr + 2) = 0;  // RIP+0
+        *(uintptr_t*)(ptr + 6) = (uintptr_t)to;
+
+        VirtualProtect(ptr, 14, oldProtect, &oldProtect);
+    }
+
+    inline uint8_t* buildRIPTrampoline(void* targetFn, size_t* outStolenBytes = nullptr) {
+        uint8_t* realFn = static_cast<uint8_t*>(resolveExecutableEntry(targetFn));
+
+        // Find instruction boundary >= 14 bytes
+        size_t stolenBytes = findSafePatchBoundary(realFn, 14, 64);
+        if (stolenBytes == 0) return nullptr;
+
+        if (outStolenBytes) *outStolenBytes = stolenBytes;
+
+        // Allocate trampoline space
+        uint8_t* trampoline = (uint8_t*)VirtualAlloc(
+            nullptr, 256,
+            MEM_COMMIT | MEM_RESERVE,
+            PAGE_EXECUTE_READWRITE
+        );
+
+        uint8_t* ptr = trampoline;
+
+        // Copy & relocate stolen instructions
+        size_t offset = 0;
+        while (offset < stolenBytes) {
+            Instruction insn = disassembleOneInstruction(realFn + offset, stolenBytes - offset);
+            uint8_t* origInstr = realFn + offset;
+
+            // Relocate RIP-relative instructions
+            if (origInstr[0] == 0xE9) {
+                // Near jump
+                int32_t oldOff = *(int32_t*)(origInstr + 1);
+                uintptr_t target = (uintptr_t)(origInstr + 5 + oldOff);
+                int32_t newOff = target - ((uintptr_t)ptr + 5);
+                *ptr++ = 0xE9;
+                *(int32_t*)ptr = newOff;
+                ptr += 4;
+            }
+            else if (insn.length == 7 && origInstr[0] == 0x48 &&
+                    (origInstr[1] == 0x8D || origInstr[1] == 0x8B)) {
+                fixRipRelativeInstruction(ptr, origInstr);
+                    }
+            else {
+                memcpy(ptr, origInstr, insn.length);
+                ptr += insn.length;
+            }
+
+            offset += insn.length;
+        }
+
+        // Jump back to continuation
+        *ptr++ = 0xFF; *ptr++ = 0x25;
+        *(int32_t*)ptr = 0; ptr += 4;
+        *(uintptr_t*)ptr = (uintptr_t)(realFn + stolenBytes);
+
+        return trampoline;
     }
 }

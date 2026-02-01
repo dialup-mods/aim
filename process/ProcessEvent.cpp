@@ -1,14 +1,14 @@
+#include "AIM.h"
 #include "Exception.h"
 #include "Printer.h"
 #include "SDK.h"
 #include "ProcessEvent.h"
-#include "AIM.h"
 #include "Resolver.h"
+#include "Detour.h"
 
 #include "AsyncGate.h"
 #include "ILogger.h"
 #include "PatchUtils.h"
-#include "PatchBuilder.h"
 #include "Dispatch.h"
 
 #include "TaskBuilder.h"
@@ -18,7 +18,6 @@
 #include <future>
 
 //#include "GameWrapperProvider.h"
-#include "PatchManager.h"
 #include "MutexGuard.h"
 #include "PluginFence.h"
 
@@ -27,6 +26,7 @@
 #include "UEModel.h"
 #include "ValueResolver.h"
 #include "Runtime.h"
+#include "IModule.h"
 namespace p = patchutils;
 using r = Runtime;
 
@@ -43,10 +43,14 @@ ProcessEvent::init() {
 
     auto checkFunc = [this]() {
         if (getRLFn() == nullptr) { return false; }
+#ifdef PATCH_WITH_BAKKESMOD
         if (getBakkesTrampolineFn() == nullptr) { return false; }
 
         BYTE* func = reinterpret_cast<BYTE*>(getRLFn());
         return (func[0] == 0xE9);  // Check if first byte is JMP rel32
+#else
+        return true;
+#endif
     };
 
     auto setupFunc = [this]() {
@@ -60,7 +64,7 @@ ProcessEvent::init() {
     std::thread([this, checkFunc, setupFunc]() {
         for (int i = 0; i < 100; ++i) {
             if (checkFunc()) {
-                log_->debug("[PE] BakksMod patch detected.");
+                log_->debug("[PE] BakkesMod patch detected.");
                 setupFunc();
                 return;
             }
@@ -77,40 +81,6 @@ ProcessEvent::init() {
 bool
 ProcessEvent::buildPatches() {
     log_->debug("[PE] build patches");
-    slackFn_ = reinterpret_cast<uint8_t*>(getBakkesTrampolineFn()) + 0x30;
-    
-    //log_->logf_debug("[PE] RL base address: 0x{:X}", p::ptr_to_uintptr(patchutils::baseAddress()));
-    //log_->logf_debug("[PE] slackSpace address: 0x{:X}", p::ptr_to_uintptr(slackFn_));
-    //log_->logf_debug("[PE] detour handler address: 0x{:X}", p::ptr_to_uintptr(&handleFunction));
-    //log_->logf_debug("[PE] vTableEntry address: 0x{:X}", p::ptr_to_uintptr(getRLFn()));
-    //log_->logf_debug("[PE] getBakkesFunc() = 0x{:X}", p::ptr_to_uintptr(getBakkesTrampolineFn()));
-
-    if (slackFn_ == nullptr || getRLFn() == nullptr) {
-        log_->error("[PE] something is null");
-        return false;
-    }
-
-    applyPatch_ = PatchBuilder()
-        .name("Process Event")
-    
-        // slackFn_ -> handle
-        .setPosition(p::ptr_to_uintptr(slackFn_))
-        .absoluteJump(p::ptr_to_uintptr(&handleFunction))
-
-        // vtable entry -> slackFn_
-        .setPosition(p::ptr_to_uintptr(getRLFn()))
-        .shortJump(p::ptr_to_uintptr(slackFn_))
-    
-        .finalize();
-
-    removePatch_ = PatchBuilder()
-        .name("Process Event Remove")
-
-        // vTable entry -> previous jump
-        .setPosition(p::ptr_to_uintptr(getRLFn()))
-        .shortJump(p::ptr_to_uintptr(getBakkesTrampolineFn()))
-        .finalize();
-    
     return true;
 }
 
@@ -145,6 +115,7 @@ void* ProcessEvent::getRLFn() {
     return fn;
 }
 
+
 // first jmp after vTable
 void* ProcessEvent::getBakkesTrampolineFn() {
     if (bakkesTrampolineFn_ != nullptr) { return bakkesTrampolineFn_; }
@@ -158,7 +129,7 @@ void* ProcessEvent::getBakkesTrampolineFn() {
 
     auto chain = patchutils::walkTrampolineChain(getRLFn());
 
-    if (chain.size() < 2) {
+    if (chain.size() < 3) {
         log_->error("[PE] Trampoline chain too short, expected at least 2 entries");
         return nullptr;
     }
@@ -176,43 +147,25 @@ void* ProcessEvent::getBakkesTrampolineFn() {
 void
 ProcessEvent::applyDetour() {
     log_->debug("[PE] applyDetour()");
-    
-//    ExecuteOnGameWrapper([this](GameWrapper* gw) {
-        log_->debug("[PE] applying patch...");
 
-        if (!mutex_->tryAcquire(1/*ms*/)) {
-            log_->warn("[PE] Already patched -- nothing to apply");
-            return;
-        }
+    if (!mutex_->tryAcquire(1/*ms*/)) {
+        log_->warn("[PE] Already patched -- nothing to apply");
+        return;
+    }
 
-        auto pm = PatchManager();
-        pm.apply(applyPatch_);
+    log_->debug("[PE] applying detour at: {}", getRLFn());
+    detour_->attach(getRLFn(), (void*)&handleFunction);
 
-        log_->debug("[PE] patch applied");
-        appliedGate_->setReady();
-//    });
+    log_->debug("[PE] detoured");
+    appliedGate_->setReady();
 }
 
 void
 ProcessEvent::removeDetour() {
     log_->debug("[PE] removeDetour()");
-
     mutex_->release();
-
-    PatchManager().apply(removePatch_);
-
     //teardownFence_->release("PE");
-
-//    ExecuteOnGameWrapper([this](GameWrapper* gw) {
-//        printf("[PE] removing detour...\n");
-//
-//        auto pm = PatchManager();
-//        pm.apply(removePatch_);
-//
-//        printf("[PE] detour removed\n");
-//        this->mutex_->release();
-//        removedGate_->setReady();
-//    });
+    //removedGate_->setReady();
 }
 
 bool ProcessEvent::waitForUnlock(DWORD timeoutMs) const {
@@ -224,6 +177,13 @@ bool ProcessEvent::fastIsAcquired() {
         return instance_->getMutex()->fastIsAcquired();
     }
     return false;
+}
+
+void* ProcessEvent::getTrampoline() {
+    if (instance_ && instance_->detour_->getTrampoline()) {
+        return instance_->detour_->getTrampoline();
+    }
+    return nullptr;
 }
 
 void ProcessEvent::printStr(const std::string& prefix, const std::string& str) {
@@ -243,33 +203,35 @@ auto ProcessEvent::convert(void* params) -> uint8_t* {
     }
 }
 
-
 // Parms is just a blob
 // UProperty::Offset is the meaning
 // The function object provides the schema
 // PE source: https://github.com/CodeRedModding/UnrealEngine3/blob/main/Development/Src/Core/Src/UnCorSc.cpp#L6270
 void __fastcall ProcessEvent::handleFunction(UObject* self, UFunction* fn, void* paramsPtr, void* resultPtr) {
     if (!fastIsAcquired()) {
-        reinterpret_cast<tProcessEvent>(bakkesTrampolineFn_)(self, fn, paramsPtr, resultPtr);
+        reinterpret_cast<tProcessEvent>(getTrampoline())(self, fn, paramsPtr, resultPtr);
         return;
     }
 
-    //if (fn && fn->GetFullName() == "Function ProjectX.EOSMetrics_X.HandleCrash") {
-    //    return;
-    //}
+    auto selfName = r::uobject_utils::getFullName(self);
+    auto fnName = r::uobject_utils::getFullName(fn);
 
-    //if (fn && fn->GetFullName().find("ProjectX.CrashReport") != std::string::npos) {
-    //    return;
-    //}
+    if (fn && fnName == "Function ProjectX.EOSMetrics_X.HandleCrash") {
+        return;
+    }
+
+    if (fn && fnName.find("ProjectX.CrashReport") != std::string::npos) {
+        return;
+    }
 
     //if (fn && fn->GetFullName() == "Function TAGame.GFxData_Chat_TA.OnQuickChatAdded") {
-    //if (fn && fn->GetFullName().find("PopUpOnlyNotification") != std::string::npos) {
-    //    printf("[PE] (pre): %s\n", fn->GetFullName().c_str());
-    //    printf("     -> fn     %s\n", fn->GetFullName().c_str());
-    //    printf("     -> ptr    %p\n", fn->VfTableObject.Ptr);
-    //    printf("     -> self   %s\n", self->GetFullName().c_str());
-    //    printf("     -> ptr    %p\n", self->VfTableObject.Ptr);
-    //    printf("     -> params %p\n", static_cast<void*>(&paramsPtr));
+    if (fn && fnName.find("Notification") != std::string::npos) {
+        printf("[PE] (pre):\n");
+        printf("     -> fn     %s\n", fnName.c_str());
+        printf("     -> ptr    %p\n", fn->VfTableObject.Ptr);
+        printf("     -> self   %s\n", selfName.c_str());
+        printf("     -> ptr    %p\n", self->VfTableObject.Ptr);
+        printf("     -> params %p\n", static_cast<void*>(&paramsPtr));
 
     //    const auto base = static_cast<uint8_t*>(paramsPtr);
 
@@ -323,7 +285,7 @@ void __fastcall ProcessEvent::handleFunction(UObject* self, UFunction* fn, void*
         //    func();
         //});
         //safeFunc();
-    //}
+    }
 
     // todo: add backpressure monitoring
     // start frame timing
@@ -344,7 +306,7 @@ void __fastcall ProcessEvent::handleFunction(UObject* self, UFunction* fn, void*
         }
 
         // call original function
-        reinterpret_cast<tProcessEvent>(bakkesTrampolineFn_)(self, fn, paramsPtr, resultPtr);
+        reinterpret_cast<tProcessEvent>(getTrampoline())(self, fn, paramsPtr, resultPtr);
 
         // create a context with fn result
         context = InvocationContext::makeProcessEventContext(self, fn, paramsPtr, resultPtr);
@@ -356,36 +318,38 @@ void __fastcall ProcessEvent::handleFunction(UObject* self, UFunction* fn, void*
         // runs for every tick
         //dispatch->dispatchUnconditionally(context);
 
-        //if (fn && fn->GetFullName().find("PopUpOnlyNotification") != std::string::npos) {
-        //    printf("[PE] (post): %s\n", fn->GetFullName().c_str());
-        //    printf("  -> fn:    %s\n", fn->GetFullName().c_str());
-        //    printf("              -> %p\n", fn->VfTableObject.Ptr);
-        //    printf("  -> self: %s\n", self->GetFullName().c_str());
-        //    printf("              -> %p\n", self->VfTableObject.Ptr);
-        //    printf("  -> params %p\n", static_cast<void*>(&paramsPtr));
-        //    if (fn && paramsPtr && fn->ParmsSize != 0) {
-        //        const auto base = static_cast<uint8_t*>(paramsPtr);
+        if (fn && fnName.find("Notification") != std::string::npos) {
+            printf("[PE] (post):\n");
+            printf("     -> fn     %s\n", fnName.c_str());
+            printf("     -> ptr    %p\n", fn->VfTableObject.Ptr);
+            printf("     -> self   %s\n", selfName.c_str());
+            printf("     -> ptr    %p\n", self->VfTableObject.Ptr);
+            printf("     -> params %p\n", static_cast<void*>(&paramsPtr));
 
-        //        for (UProperty* prop = static_cast<UProperty*>(fn->Children);
-        //             prop;
-        //             prop = static_cast<UProperty*>(prop->Next))
-        //        {
-        //            if (!(prop->PropertyFlags & CPF_Parm)) { continue; }
+            if (fn && paramsPtr && fn->ParmsSize != 0) {
+                const auto base = static_cast<uint8_t*>(paramsPtr);
 
-        //            for (int i = 0; i < prop->ArrayDim; ++i) {
-        //                printf("i: %i\n", i);
-        //                void* valuePtr = base + prop->Offset + i * prop->ElementSize;
-        //                ResolvedValue out;
-        //                auto propEntry = UEModel::assignClass(prop);
-        //                printf(" %s\n", propEntry->getCanonicalTypeStr().c_str());
-        //                propEntry->resolveInto(out, valuePtr);
-        //                Printer::debugPrint(out);
-        //            }
-        //        }
-        //    }
-        //}
+                for (UProperty* prop = static_cast<UProperty*>(fn->Children);
+                     prop;
+                     prop = static_cast<UProperty*>(prop->Next))
+                {
+                    if (!(prop->PropertyFlags & CPF_Parm)) { continue; }
+
+                    for (int i = 0; i < prop->ArrayDim; ++i) {
+                        printf("i: %i\n", i);
+                        void* valuePtr = base + prop->Offset + i * prop->ElementSize;
+                        ResolvedValue out;
+                        auto propEntry = UEModel::assignClass(prop);
+                        printf(" %s\n", propEntry->getCanonicalTypeStr().c_str());
+                        propEntry->resolveInto(out, valuePtr);
+                        Printer::debugPrint(out);
+                    }
+                }
+            }
+        }
+
     } else {
         // dispatcher is MIA fallback
-        reinterpret_cast<tProcessEvent>(bakkesTrampolineFn_)(self, fn, paramsPtr, resultPtr);
+        reinterpret_cast<tProcessEvent>(getTrampoline())(self, fn, paramsPtr, resultPtr);
     }
 }

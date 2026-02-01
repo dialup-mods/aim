@@ -36,6 +36,7 @@ include_directories(
     ${CMAKE_SOURCE_DIR}/../model/resolve
     ${CMAKE_SOURCE_DIR}/../model/types
     ${CMAKE_SOURCE_DIR}/../util
+
     ${DIALUP_INSTALL_DIR}/include/v1
     ${DIALUP_INSTALL_DIR}/include/model/v1
     ${DIALUP_INSTALL_DIR}/sdk-plugin/include

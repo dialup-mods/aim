@@ -141,15 +141,9 @@ withSafePtr(T* ptr, Func operation) {
 //readStringField(UObject* obj, size_t offset, size_t len);
 
 
-// Write bytes safely
 inline bool writeBytes(void* dest, const std::vector<uint8_t>& bytes) {
-    if (bytes.empty()) {
-        return true; // nothing to write
-    }
-
-    if (!isAddressAccessible(dest, bytes.size())) {
-        return false;
-    }
+    if (bytes.empty()) { return true; }
+    if (!isAddressAccessible(dest, bytes.size())) { return false; }
 
     DWORD oldProtect;
     if (!VirtualProtect(dest, bytes.size(), PAGE_EXECUTE_READWRITE, &oldProtect)) {
@@ -164,15 +158,10 @@ inline bool writeBytes(void* dest, const std::vector<uint8_t>& bytes) {
     return true;
 }
 
-// Overload for raw data pointer
-inline bool writeBytes(void* dest, const uint8_t* src, size_t size) {
-    if (size == 0) {
-        return true;
-    }
+inline bool writeBytes(void* dest, const uint8_t* src, const size_t size) {
+    if (size == 0) { return true; }
 
-    if (!isAddressAccessible(dest, size)) {
-        return false;
-    }
+    if (!isAddressAccessible(dest, size)) { return false; }
 
     DWORD oldProtect;
     if (!VirtualProtect(dest, size, PAGE_EXECUTE_READWRITE, &oldProtect)) {

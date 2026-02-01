@@ -10,8 +10,6 @@
 #include "Dispatch.h"
 #include "ILogger.h"
 #include "MutexGuard.h"
-#include "PatchBuilder.h"
-#include "PatchManager.h"
 #include "PatchUtils.h"
 #include "ProcessEvent.h"
 #include "ProcessInternal.h"
@@ -44,25 +42,6 @@ CallFunction::buildPatches() {
     //log_->logf_debug("[CF] detour target address: 0x{:X}", p::ptr_to_uintptr(&handleFunction));
     //log_->logf_debug("[CF] vTableEntry address: 0x{:X}", p::ptr_to_uintptr(getRLFn()));
     //log_->logf_debug("[CF] bakkes address: 0x{:X}", p::ptr_to_uintptr(getBakkesTrampolineFn()));
-
-    applyPatch_ = PatchBuilder()
-        .name("Call Function")
-    
-        // slack -> handle
-        .setPosition(p::ptr_to_uintptr(slack_))
-        .absoluteJump(p::ptr_to_uintptr(&handleFunction))
-
-        // vtable entry -> slack
-        .setPosition(p::ptr_to_uintptr(callFunctionFn_))
-        .shortJump(p::ptr_to_uintptr(slack_))
-    
-        .finalize();
-
-    removePatch_ = PatchBuilder()
-        .name("Call Function Remove")
-        .setPosition(p::ptr_to_uintptr(callFunctionFn_))
-        .shortJump(p::ptr_to_uintptr(bakkesTrampolineFn_))
-        .finalize();
 }
 
 //auto CallFunction::getDispatchShutdownGate() -> AsyncGate* {
@@ -116,9 +95,6 @@ bool CallFunction::applyDetour() {
                     return;
                 }
 
-                auto pm = PatchManager();
-                pm.apply(applyPatch_);
-
                 printf("[CF] detoured");
                 appliedGate_->setReady();
             })
@@ -137,10 +113,6 @@ bool CallFunction::removeDetour() {
             .phase(HookPhase::Post)
             .callback([this](InvocationContext& ctx) {
                 printf("[CF] removing detour...\n");
-
-                // then patch mem
-                auto pm = PatchManager();
-                pm.apply(removePatch_);
 
                 printf("[CF] removed\n");
                 this->mutex_->release();

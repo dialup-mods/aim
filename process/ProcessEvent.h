@@ -18,7 +18,6 @@ using DWORD = unsigned long;
 
 class ILogger;
 class Dispatch;
-class PatchManager;
 class TaskQueue;
 class PluginState;
 
@@ -31,9 +30,9 @@ class UObject;
 class UFunction;
 class MutexGuard;
 class PluginFence;
+class Detour;
 
 #include "TaskStructs.h"
-#include "PatchDefinition.h"
 
 // clang-format off
     
@@ -41,15 +40,14 @@ class ProcessEvent : public IProcessEvent {
     AIM_INJECTABLE(ProcessEvent)
 
     AIM_INJECT(ILogger, log)
-    AIM_INJECT(PluginState, state)
     AIM_INJECT(Dispatch, dispatch)
     AIM_INJECT(TaskQueue, taskQueue)
-    AIM_INJECT(PatchManager, patchManager)
     AIM_INJECT(AsyncGate, appliedGate)
     AIM_INJECT(AsyncGate, removedGate)
     AIM_INJECT(PluginFence, readyFence)
     AIM_INJECT(PluginFence, teardownFence)
     AIM_INJECT(MutexGuard, mutex)
+    AIM_INJECT(Detour, detour)
 //    AIM_INJECT(GameWrapperProvider, gameWrapperProvider)
 
     using tProcessEvent = void(__fastcall*)(UObject* self, UFunction* fn, void* params, void* result);
@@ -74,14 +72,13 @@ public:
     bool shouldUseVTableEntry() const { return true; }
     bool shouldResolveJump()    const { return true; }
 
-    static inline PatchDefinition applyPatch_ {};
-    static inline PatchDefinition removePatch_ {};
     static inline std::shared_ptr<TaskDefinition> applyTask_{};
     static inline std::shared_ptr<TaskDefinition> removeTask_{};
     
     static inline uint8_t* slackFn_ = nullptr;
     static inline void* processEventVTableFn_ = nullptr;
     static inline void* targetFn = nullptr;
+    static inline void* resumePtr_ = nullptr;
     static inline void* bakkesTrampolineFn_ = nullptr;
     static inline void* processEventTargetFn = nullptr;
     static inline void* addressOfFirstJumpFromVTable = nullptr;
@@ -108,11 +105,16 @@ public:
     void releaseTask(std::shared_ptr<TaskDefinition> def) override;
     void clearTasks() override;
     void* getRLFn();
+
+    void *getResumeAddress();
+
     void* getBakkesTrampolineFn();
     
     const std::shared_ptr<MutexGuard>& getMutex() const { return mutex_; }
     bool waitForUnlock(DWORD timeoutMs = 500) const;
     static bool fastIsAcquired();
+
+    static void *getTrampoline();
 
     static void printStr(const std::string&, const std::string&);
 
