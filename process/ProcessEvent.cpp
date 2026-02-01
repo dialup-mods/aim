@@ -32,6 +32,12 @@ using r = Runtime;
 
 ProcessEvent* ProcessEvent::instance_ = nullptr;
 
+struct ReentrancyGuard {
+    bool& flag;
+    ReentrancyGuard(bool& f) : flag(f) { flag = true; }
+    ~ReentrancyGuard() { flag = false; }
+};
+
 bool
 ProcessEvent::init() {
     log_->debug("[PE] init()");
@@ -216,10 +222,13 @@ auto ProcessEvent::convert(void* params) -> uint8_t* {
 // The function object provides the schema
 // PE source: https://github.com/CodeRedModding/UnrealEngine3/blob/main/Development/Src/Core/Src/UnCorSc.cpp#L6270
 void __fastcall ProcessEvent::handleFunction(UObject* self, UFunction* fn, void* paramsPtr, void* resultPtr) {
-    if (!fastIsAcquired()) {
+    static thread_local bool inHandler = false;
+    if (inHandler || !fastIsAcquired()) {
         reinterpret_cast<tProcessEvent>(getTrampoline())(self, fn, paramsPtr, resultPtr);
         return;
     }
+
+    ReentrancyGuard guard(inHandler);
 
     auto selfName = r::uobject_utils::getFullName(self);
     auto fnName = r::uobject_utils::getFullName(fn);
@@ -322,9 +331,6 @@ void __fastcall ProcessEvent::handleFunction(UObject* self, UFunction* fn, void*
 
         // conditional hooks
         dispatch->dispatchGated(fn->ObjectInternalInteger, context);
-
-        // runs for every tick
-        //dispatch->dispatchUnconditionally(context);
 
         if (fn && fnName.find("Notification") != std::string::npos) {
             printf("[PE] (post):\n");
