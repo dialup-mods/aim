@@ -2,7 +2,6 @@
 #include "CallbackBuilder.h"
 #include "TaskStructs.h"
 #include "IModule.h"
-#include "ITaskBuilder.h"
 
 #include <stdexcept>
 
@@ -10,7 +9,7 @@ enum class ReturnType { Void, Bool };
 
 namespace c = callbackbuilder;
 
-class AIM_API TaskBuilder : ITaskBuilder {
+class AIM_API TaskBuilder : IModule {
     AIM_INJECTABLE(TaskBuilder)
 
     std::shared_ptr<TaskDefinition> task_;
@@ -18,19 +17,32 @@ class AIM_API TaskBuilder : ITaskBuilder {
     TaskBuilder()
       : task_(std::make_shared<TaskDefinition>()) {}
 
-    auto name(std::string n) -> TaskBuilder& override {
+    auto name(std::string n) -> TaskBuilder& {
         task_->name = std::move(n);
         return *this;
     }
-    auto functionName(std::string fn) -> TaskBuilder& override {
+    auto functionName(std::string fn) -> TaskBuilder& {
         task_->functionName = std::move(fn);
         return *this;
     }
 
-    auto phase(HookPhase p) -> TaskBuilder& override {
+    auto phase(HookPhase p) -> TaskBuilder& {
         task_->phase = std::move(p);
         return *this;
     }
+
+    // fixme blocker - move blocking outside of public view
+    class AIMTaskBuilderAccess {
+    public:
+        template<typename F>
+        static TaskBuilder& callbackBlocking(TaskBuilder& b, F&& f) {
+            return b.callbackBlocking(std::forward<F>(f));
+        }
+
+        static TaskBuilder& isBlocking(TaskBuilder& b, bool v = true) {
+            return b.isBlocking(v);
+        }
+    };
 
     auto isBlocking(const bool isBlocking = true) -> TaskBuilder& {
         if (isBlocking && task_->phase != HookPhase::Pre) {
@@ -42,12 +54,12 @@ class AIM_API TaskBuilder : ITaskBuilder {
         return *this;
     }
 
-    auto once(bool once = true) -> TaskBuilder& override {
+    auto once(bool once = true) -> TaskBuilder& {
         task_->once = once;
         return *this;
     }
 
-    auto nextTick(bool deferred = false) -> TaskBuilder& override {
+    auto nextTick(bool deferred = false) -> TaskBuilder& {
         task_->nextTick = deferred;
         return *this;
     }
@@ -86,7 +98,7 @@ class AIM_API TaskBuilder : ITaskBuilder {
         task_->registerTask = std::move(task);
         return *this;
     }
-    auto maxAttempts(int maxAttempts) -> TaskBuilder& override {
+    auto maxAttempts(int maxAttempts) -> TaskBuilder& {
         if (maxAttempts > 0) {
             task_->maxAttempts = std::move(maxAttempts);
         } else {
@@ -94,7 +106,7 @@ class AIM_API TaskBuilder : ITaskBuilder {
         }
         return *this;
     }
-    auto timeoutSeconds(const float timeoutSeconds) -> TaskBuilder& override {
+    auto timeoutSeconds(const float timeoutSeconds) -> TaskBuilder& {
         if (timeoutSeconds > 0) {
             task_->timeoutSeconds = timeoutSeconds;
         } else {
@@ -103,7 +115,7 @@ class AIM_API TaskBuilder : ITaskBuilder {
         return *this;
     }
 
-    auto build() -> std::shared_ptr<TaskDefinition> override {
+    auto build() -> std::shared_ptr<TaskDefinition> {
         static int32_t nextID = 420;
         task_->id = nextID++;
 
@@ -115,7 +127,7 @@ class AIM_API TaskBuilder : ITaskBuilder {
         throw std::runtime_error("RecoveryTaskBuilder: Cannot build a task that does nothing.");
     }
 
-    auto retry(const int attempts, const float seconds) -> TaskBuilder& override {
+    auto retry(const int attempts, const float seconds) -> TaskBuilder& {
         return maxAttempts(attempts).timeoutSeconds(seconds);
     }
 
@@ -134,26 +146,5 @@ class AIM_API TaskBuilder : ITaskBuilder {
     bool doesSomething() const {
         return task_->preStep || task_->callbackBlocking || task_->successCondition || task_->onSuccessCallback ||
             task_->afterSuccessCallback || task_->onFailureCallback || task_->callback;
-    }
-
-protected:
-    void setCallback(CallbackType cb) override {
-        task_->callback = std::move(cb);
-    }
-
-    void setPreStep(CallbackType cb) override {
-        task_->preStep = std::move(cb);
-    }
-
-    void setSuccessCondition(CallbackType cb) override {
-        task_->preStep = std::move(cb);
-    }
-
-    void setSuccessCallback(CallbackType cb) override {
-        task_->preStep = std::move(cb);
-    }
-
-    void setFailureCallback(CallbackType cb) override {
-        task_->preStep = std::move(cb);
     }
 };
