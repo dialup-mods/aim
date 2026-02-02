@@ -1,66 +1,4 @@
 ﻿#pragma once
-#include "SafeMemory.h"
-
-#define SAFE_READ(ptr, fallback) (safe::memory::readPtrSafeOr(ptr, fallback))
-#define SAFE_WRITE(ptr, value) (safe::memory::readPtrSafeOr(ptr, value))
-#define SAFE_DEREF(ptr) (safe::memory::derefPtrSafe(ptr))
-#define SAFE_DEREF_VOID(ptr) (safe::memory::derefPtrSafe(ptr))
-#define IS_ADDRESS_ACCESSIBLE(ptr) (safe::memory::isAddressAccessible(ptr)
-
-// run code if pointer valid
-#define WITH_SAFE_PTR(ptr, code) (safe::memory::withSafePtr(ptr, [&](auto* _ptr_) { code; }))
-
-// run fallback logic if pointer invalid
-#define SAFE_READ_OR_ELSE(ptr, fallbackCode)                                   \
-    ([&]() -> auto {                                                           \
-        auto result = fallbackCode;                                            \
-        safe::memory::withSafePtr(ptr, [&](auto* _ptr_) { result = *_ptr_; }); \
-        return result;                                                         \
-    }())
-
-// alias for WITH_SAFE_PTR
-#define SAFE_BLOCK(ptr, code) WITH_SAFE_PTR(ptr, code)
-
-// Try safely evaluating a chained pointer expression
-// e.g. auto weapon = SAFE_CHAIN(pPlayer, pPlayer->inventory->currentWeapon->data);
-#define SAFE_CHAIN(ptr, expr)                                      \
-    ([&]() -> std::remove_pointer_t<decltype(expr)>* {             \
-        if (!safe::memory::isAddressAccessible(ptr))               \
-            return nullptr;                                        \
-        __try {                                                    \
-            return expr;                                           \
-        } __except (EXCEPTION_EXECUTE_HANDLER) { return nullptr; } \
-    }())
-
-#define SAFE_EVAL(expr)                                                                         \
-    ([&]() -> std::optional<std::remove_reference_t<decltype((expr))>> {                        \
-        using T = std::remove_reference_t<decltype((expr))>;                                    \
-        static_assert(std::is_destructible_v<T>, "SAFE_EVAL: Expression must be destructible"); \
-        if (!safe::memory::isAddressAccessible(reinterpret_cast<const void*>(&(expr))))         \
-            return std::nullopt;                                                                \
-        __try {                                                                                 \
-            return (expr);                                                                      \
-        } __except (EXCEPTION_EXECUTE_HANDLER) { return std::nullopt; }                         \
-    }())
-
-// Instead of this (which might crash):
-//
-//     int value = *somePtr;
-//
-// Do this:
-//
-//     int value;
-//     if (SAFE_READ(somePtr, value)) {
-//         // value is updated
-//         // use value safely
-//     } else {
-//         // value doesn't change -- is fallback
-//         // Handle the error
-//     }
-//
-// Or even simpler:
-//
-//     int value = SAFE_READ(somePtr, 0);  // Returns 0 if pointer is invalid
 
 namespace safe::memory {
 
@@ -134,12 +72,6 @@ withSafePtr(T* ptr, Func operation) {
         return true;
     } __except (EXCEPTION_EXECUTE_HANDLER) { return false; }
 }
-
-//std::string
-//safeFString(UObject* maybeFStringObj);
-//std::string
-//readStringField(UObject* obj, size_t offset, size_t len);
-
 
 inline bool writeBytes(void* dest, const std::vector<uint8_t>& bytes) {
     if (bytes.empty()) { return true; }
