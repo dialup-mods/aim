@@ -10,13 +10,13 @@
 #include "Detour.h"
 
 #include "TaskBuilder.h"
-#include "v1/ITaskBuilder.h"
+#include "ITaskBuilder.h"
 
 #include "ModuleLoader.h"
 #include "TaskQueue.h"
 // #include "ConsoleInterpreter.h"
 #include "EngineLocator.h"
-#include "ObjectProvider.h"
+#include "ObjectQuery.h"
 #include "PluginFence.h"
 
 #include "CallFunction.h"
@@ -92,14 +92,14 @@ bool AIM::createPopulateRuntime() {
 
     registerModule(ModuleDefinition<AsyncGate>().named("ObjectProviderReady").asSingleton());
 
-    registerModule(ModuleDefinition<ObjectProvider>()
-            .withDependency(&ObjectProvider::__inject_log, "[default]")
-            .withDependency(&ObjectProvider::__inject_asyncGate, "ObjectProviderReady")
-            .withDependency(&ObjectProvider::__inject_runtime, "ObjectProviderReady")
+    registerModule(ModuleDefinition<ObjectQuery, IObjectQuery>()
+            .withDependency(&ObjectQuery::__inject_log, "[default]")
+            .withDependency(&ObjectQuery::__inject_asyncGate, "ObjectProviderReady")
+            .withDependency(&ObjectQuery::__inject_runtime, "ObjectProviderReady")
             .asSingleton());
 
-    auto objectProvider = resolve<ObjectProvider>("[default]");
-    if (!objectProvider) {
+    auto objectQuery = resolve<ObjectQuery>("[default]");
+    if (!objectQuery) {
         getLogger()->error("Could not resolve ObjectProvider");
         return false;
     }
@@ -169,7 +169,7 @@ bool AIM::registerFunctionModuleDependencies(const std::string& prefix) {
         ModuleDefinition<Dispatch>()
             .named(prefix + "-Dispatch")
             .withDependency(&Dispatch::__inject_log, "[default]")
-            .withDependency(&Dispatch::__inject_objectProvider, "[default]")
+            .withDependency(&Dispatch::__inject_objectQuery, "[default]")
             .withDependency(&Dispatch::__inject_taskQueue, prefix + "-TaskQueue")
             .asSingleton()
     );
@@ -257,28 +257,14 @@ AIM::loadDetourModules() {
     });
 
     //registerModule(
-    //ModuleDefinition<TaskBuilder>()
-    //    .withFactory([](Resolver& r) {
-    //        return std::make_shared<TaskBuilder>();
-    //    })
-    //    .asTransient()
-    //);
-
-    //registerModule(
     //ModuleDefinition<ITaskBuilder>()
     //    .withFactory([](Resolver& r) {
     //        return std::make_shared<ITaskBuilder>();
     //    })
     //    .asTransient()
     //);
-
-    //auto taskBuilder = resolve<TaskBuilder>();
-    //pe->onDetoured([this, log = getLogger(), cf, pe] {
-    //    //cf->init();
-    //});
-
-//    auto processEventInterface = std::make_shared<IProcessEvent>();
-//    context_->getDialUp()->registerInstance<IProcessEvent>(processEventInterface);
+    //registerModule(ModuleDefinition<TaskBuilder, ITaskBuilder>()
+    //        .asTransient());
 
 //    if (auto stateObj = container.resolve<PluginState>("[default]")) {
 ////        stateObj->setStatus(Running);
@@ -362,11 +348,12 @@ AIM::startup() {
             getLogger()->debug("AIM gate setReady()");
 
             setPluginReady();
+            testToast();
         });
     });
 
 //    auto processEvent = resolve<ProcessEvent>("[default]");
-//    auto objectProvider = resolve<ObjectProvider>("[default]");
+//    auto objectQuery = resolve<ObjectProvider>("[default]");
 
 //    std::shared_ptr<IObjectProvider> iface = resolve<ObjectProvider>();
 //    registerInstance<IObjectProvider>(iface);
@@ -404,7 +391,7 @@ AIM::startup() {
 
 void AIM::testToast() {
     auto processEvent = resolve<ProcessEvent>();
-    auto objectProvider = resolve<ObjectProvider>();
+    auto objectQuery = resolve<IObjectQuery>();
 
     // spawn one, getinstance returns this new one
     // and it shows a notification in the friends, etc panel
@@ -414,9 +401,9 @@ void AIM::testToast() {
             .name("Toast")
             .functionName("Function Engine.HUD.PostRender")
             .phase(HookPhase::Post)
-            .callback([objectProvider](InvocationContext& ctx) {
-                auto* mgr = objectProvider->getInstanceOf<UNotificationManager_TA>();
-                auto* notificationClass = objectProvider->classOf<UGenericNotification_TA>();
+            .callback([objectQuery](InvocationContext& ctx) {
+                auto* mgr = objectQuery->getFirst<UNotificationManager_TA>();
+                auto* notificationClass = objectQuery->classOf<UGenericNotification_TA>();
                 UNotification_TA* ret = mgr->PopUpOnlyNotification(notificationClass);
                 ret->SetTitle(FString(L"Welcome."));
                 ret->SetBody(FString(L"You've got mail!"));
@@ -431,7 +418,7 @@ auto AIM::registerPublicInterfaces() const -> std::vector<PublicInterface> {
         expose<IProcessEvent>(resolve<ProcessEvent>())
         , expose<ICallFunction>(resolve<CallFunction>())
         , expose<IProcessInternal>(resolve<ProcessInternal>())
-        , expose<IObjectProvider>(resolve<ObjectProvider>())
+        , expose<IObjectQuery>(resolve<IObjectQuery>())
         , expose<ITaskBuilder>(resolve<ITaskBuilder>())
     };
 }

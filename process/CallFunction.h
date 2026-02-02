@@ -11,7 +11,7 @@
 
 using DWORD = unsigned long;
 class ILogger;
-class ObjectProvider;
+class ObjectQuery;
 class Dispatch;
 class TaskQueue;
 class PluginState;
@@ -39,7 +39,7 @@ class CallFunction : public ICallFunction {
     AIM_INJECT(PluginState, state)
     AIM_INJECT(Dispatch, dispatch)
     AIM_INJECT(TaskQueue, taskQueue)
-    AIM_INJECT(ObjectProvider, objectProvider)
+    AIM_INJECT(ObjectQuery, objectProvider)
     AIM_INJECT(AsyncGate, appliedGate)
     AIM_INJECT(AsyncGate, removedGate)
     AIM_INJECT(MutexGuard, mutex)

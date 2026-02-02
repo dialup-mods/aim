@@ -5,7 +5,7 @@
 
 #include "EventContext.h"
 
-// 🧠 Task Scheduling Note:
+// Task Scheduling Note:
 //
 // RunType::Immediate:
 //
