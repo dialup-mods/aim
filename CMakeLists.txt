@@ -21,6 +21,7 @@ set(SOURCES
 set(INCLUDES
     ${CMAKE_SOURCE_DIR}
     ${CMAKE_SOURCE_DIR}/include
+    ${CMAKE_SOURCE_DIR}/include/v1
     ${CMAKE_SOURCE_DIR}/context
     ${CMAKE_SOURCE_DIR}/core
     ${CMAKE_SOURCE_DIR}/dispatch
@@ -66,6 +67,8 @@ install(FILES
 	${CMAKE_CURRENT_SOURCE_DIR}/build/AIM.pdb
 	DESTINATION ${GAME_BINARY_PATH})
 
+install(DIRECTORY include/v1/ DESTINATION ${DIALUP_DIR}/include/v1)
+
 
 find_package(DialUp-SDK REQUIRED PATHS ${DIALUP_INSTALL_DIR}/sdk-plugin)
 target_link_libraries(${PROJECT_NAME} PRIVATE DialUp-SDK::DialUp-SDK)
@@ -82,14 +85,9 @@ set_target_properties(PolyHook_2 PROPERTIES
     MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>DLL"
 )
 target_link_libraries(${PROJECT_NAME} PRIVATE PolyHook_2)
-
 #target_include_directories(${PROJECT_NAME} PRIVATE ${polyhook2_SOURCE_DIR})
 
 #add_link_options(/DEBUG /INCREMENTAL:NO /OPT:REF /OPT:ICF)
-
-#target_link_libraries(${PROJECT_NAME} PRIVATE psapi)
-
-#configure_plugin(${PROJECT_NAME})
 #set_target_properties(${PROJECT_NAME} PROPERTIES
 #    WINDOWS_EXPORT_ALL_SYMBOLS OFF
 #)
