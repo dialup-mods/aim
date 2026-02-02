@@ -1,6 +1,6 @@
 ﻿#pragma once
 
-// 🧠 Scoped utilities for RAII, guarded logic, and defer-style cleanup
+// Scoped utilities for RAII, guarded logic, and defer-style cleanup
 
 #include "EventContext.h"
 

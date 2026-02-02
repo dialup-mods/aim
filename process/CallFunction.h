@@ -112,7 +112,7 @@ class CallFunction : public ICallFunction {
     void shutdown();
     void registerTask(std::shared_ptr<TaskDefinition> def) override;
     void releaseTask(std::shared_ptr<TaskDefinition> def) override;
-    void clearTasks() override;
+    void clearTasks();
     void* getAddress();
     void* getBakkesTrampolineFn();
     

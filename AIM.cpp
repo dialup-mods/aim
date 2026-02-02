@@ -431,7 +431,7 @@ auto AIM::registerPublicInterfaces() const -> std::vector<PublicInterface> {
         expose<IProcessEvent>(resolve<ProcessEvent>())
         , expose<ICallFunction>(resolve<CallFunction>())
         , expose<IProcessInternal>(resolve<ProcessInternal>())
-        , expose<IObjectProvider>(resolve<IObjectProvider>())
+        , expose<IObjectProvider>(resolve<ObjectProvider>())
         , expose<ITaskBuilder>(resolve<ITaskBuilder>())
     };
 }

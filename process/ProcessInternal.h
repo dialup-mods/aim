@@ -112,9 +112,8 @@ public:
     void shutdown();
     void registerTask(std::shared_ptr<TaskDefinition> def) override;
     void releaseTask(std::shared_ptr<TaskDefinition> def) override;
-    void clearTasks() override;
+    void clearTasks();
     void* getRLFn();
-    void* getBakkesTrampolineFn();
 
     const std::shared_ptr<MutexGuard>& getMutex() const { return mutex_; }
     bool waitForUnlock(DWORD timeoutMs = 500) const;
@@ -123,7 +122,6 @@ public:
     static void *getTrampoline();
 
     void applyDetour();
-    void buildRemovePatch();
 
     void removeDetour();
     
