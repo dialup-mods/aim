@@ -1,6 +1,5 @@
 ﻿#pragma once
 #include "CallbackBuilder.h"
-#include "FunctionTraits.h"
 #include "TaskStructs.h"
 #include "IModule.h"
 
