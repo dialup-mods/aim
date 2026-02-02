@@ -22,7 +22,7 @@
 //
 // TL;DR:
 //
-//   - Use Queued when timing isn’t critical and you want to be safe
+//   - Use Queued when timing isn't critical and you want to be safe
 //       massaging params will likely die with fire and is discouraged
 //
 //   - Use Immediate when you need in-place logic with low latency
