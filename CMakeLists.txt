@@ -34,6 +34,8 @@ set(INCLUDES
     ${DIALUP_INSTALL_DIR}/include
     ${DIALUP_INSTALL_DIR}/include/v1
     ${DIALUP_INSTALL_DIR}/include/external
+    ${DIALUP_INSTALL_DIR}/sdk-plugin/include
+
     ${CMAKE_SOURCE_DIR}/model
     ${CMAKE_SOURCE_DIR}/model/abstract
     ${CMAKE_SOURCE_DIR}/model/base
@@ -46,8 +48,6 @@ set(INCLUDES
     # fixme should move schema and runtime out of the plugin stuff
     # so that no one's tempted to pull in SDK dependencies (aside from schema/runtime)
     # would be easier if we didn't need the UObject def
-    ${DIALUP_INSTALL_DIR}/sdk-plugin/include
-    ${DIALUP_INSTALL_DIR}/dialup/include/v1
 )
 
 include("${DIALUP_INSTALL_DIR}/build-tools/Plugin.cmake")
