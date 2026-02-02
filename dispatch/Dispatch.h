@@ -10,7 +10,7 @@
 #include "TaskStructs.h"
 
 class ILogger;
-class ObjectProvider;
+class ObjectQuery;
 class TaskQueue;
 class AsyncGate;
 
@@ -21,7 +21,7 @@ class Dispatch : public IModule {
     AIM_INJECTABLE(Dispatch)
     
     AIM_INJECT(ILogger, log)
-    AIM_INJECT(ObjectProvider, objectProvider)
+    AIM_INJECT(ObjectQuery, objectQuery)
     AIM_INJECT(TaskQueue, taskQueue)
 
 public:

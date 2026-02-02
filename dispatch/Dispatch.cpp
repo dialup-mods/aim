@@ -5,7 +5,7 @@
 #include "Dispatch.h"
 #include "EventContext.h"
 #include "v1/ILogger.h"
-#include "ObjectProvider.h"
+#include "ObjectQuery.h"
 #include "TaskQueue.h"
 #include "Runtime.h"
 
