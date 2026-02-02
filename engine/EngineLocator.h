@@ -1,6 +1,8 @@
 #pragma once
-#include <Windows.h>
 #include "IModule.h"
+
+struct HINSTANCE__;
+typedef HINSTANCE__* HMODULE;
 
 class ILogger;
 class UObject;

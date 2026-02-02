@@ -17,7 +17,7 @@ auto EngineLocator::findPattern(HMODULE module, const unsigned char* pattern, co
     MODULEINFO info = {};
     GetModuleInformation(GetCurrentProcess(), module, &info, sizeof(MODULEINFO));
 
-    auto start = reinterpret_cast<uintptr_t>(module);
+    const auto start = reinterpret_cast<uintptr_t>(module);
     const size_t length = info.SizeOfImage;
 
     size_t pos = 0;

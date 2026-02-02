@@ -3,16 +3,14 @@
 #include "SDK.h"
 
 #include "Resolver.h"
-#include "GameTypes.h" // for FFrame
 
-#include "../task/TaskBuilder.h"
+#include "TaskBuilder.h"
 #include "AsyncGate.h"
 #include "Dispatch.h"
 #include "ILogger.h"
 #include "MutexGuard.h"
 #include "PatchUtils.h"
 #include "ProcessEvent.h"
-#include "ProcessInternal.h"
 #include "TaskQueue.h"
 #include "TaskStructs.h"
 

@@ -125,7 +125,6 @@ class ObjectProvider : public IObjectProvider {
         return nullptr;
     }
 
-    // now, on SDK generated types
     //static UClass* StaticClass() {
     //    static UClass* cls = nullptr;
     //    if (!cls) {
@@ -135,11 +134,6 @@ class ObjectProvider : public IObjectProvider {
     //    }
     //    return cls;
     //}
-    //
-
-
-
-
 
     // fixme
     // replaced with adapter-based lookup + cache.

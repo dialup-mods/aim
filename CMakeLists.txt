@@ -16,8 +16,6 @@ set(SOURCES
     ${CMAKE_SOURCE_DIR}/process/ProcessEvent.cpp
     ${CMAKE_SOURCE_DIR}/process/ProcessInternal.cpp
     ${CMAKE_SOURCE_DIR}/task/TaskQueue.cpp
-
-    ${CMAKE_SOURCE_DIR}/abstract/IProcessEvent.cpp
 )
 
 set(INCLUDES

@@ -6,7 +6,6 @@
 #include "Detour.h"
 #include "Dispatch.h"
 #include "EventContext.h"
-#include "GameTypes.h" // for FFrame
 #include "ILogger.h"
 #include "MutexGuard.h"
 #include "ObjectProvider.h"

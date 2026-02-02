@@ -29,11 +29,11 @@ class IRuntime : public IModule {
         r::fname::game_pool::set(reinterpret_cast<TArray<FNameEntry*>*>(fNameEntriesAddr));
         r::uobject::game_pool::set(reinterpret_cast<TArray<UObject*>*>(uObjectsAddr));
 
-        bool isEngineValid = r::uobject::game_pool::isPopulated() && r::uobject::game_pool::hasUObjects();
-        if (!isEngineValid) {
+        if (!(r::uobject::game_pool::isPopulated() && r::uobject::game_pool::hasUObjects())) {
             log_->error("Failed to start Runtime.");
             return false;
         }
+
         log_->debug("Engine valid: {}", std::to_string(r::uobject::game_pool::hasUObjects() && r::fname::game_pool::isValid()));
 
         //log_->info("FNameEntry::Flags     = 0x" + int_to_hex(offsetof(FNameEntry, Flags)));
