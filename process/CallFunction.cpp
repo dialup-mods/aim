@@ -27,24 +27,8 @@ CallFunction::init() {
     instance_ = this;
     mutex_->setName(getName() + "_Detour");
 
-    buildPatches();
     applyDetour();
 }
-
-void
-CallFunction::buildPatches() {
-    slack_ = reinterpret_cast<void*>(reinterpret_cast<uint8_t*>(getBakkesTrampolineFn()) + 0x20);
-
-    //log_->logf_debug("[CF] RL base address: 0x{:X}", p::ptr_to_uintptr(patchutils::baseAddress()));
-    //log_->logf_debug("[CF] slackSpace address: 0x{:X}", p::ptr_to_uintptr(slack_));
-    //log_->logf_debug("[CF] detour target address: 0x{:X}", p::ptr_to_uintptr(&handleFunction));
-    //log_->logf_debug("[CF] vTableEntry address: 0x{:X}", p::ptr_to_uintptr(getRLFn()));
-    //log_->logf_debug("[CF] bakkes address: 0x{:X}", p::ptr_to_uintptr(getBakkesTrampolineFn()));
-}
-
-//auto CallFunction::getDispatchShutdownGate() -> AsyncGate* {
-//    return dispatch_->getShutdownGate();
-//}
 
 void CallFunction::shutdown() {
     dispatch_->shutdown();
@@ -62,7 +46,7 @@ void CallFunction::clearTasks() {
     dispatch_->clearTasks();
 }
 
-void* CallFunction::getRLFn() {
+void* CallFunction::getAddress() {
     if (callFunctionFn_ == nullptr) {
         callFunctionFn_ = patchutils::patternScan(patternBytes_);
     }

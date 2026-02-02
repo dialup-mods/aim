@@ -45,47 +45,7 @@ ProcessEvent::init() {
     instance_ = this;
     mutex_->setName(getName() + "_Detour");
 
-    auto checkFunc = [this]() {
-        if (getRLFn() == nullptr) { return false; }
-#ifdef PATCH_WITH_BAKKESMOD
-        if (getBakkesTrampolineFn() == nullptr) { return false; }
-
-        BYTE* func = reinterpret_cast<BYTE*>(getRLFn());
-        return (func[0] == 0xE9);  // Check if first byte is JMP rel32
-#else
-        return true;
-#endif
-    };
-
-    auto setupFunc = [this]() {
-        if (!this->buildPatches()) { return false; }
-
-        this->applyDetour();
-
-        return true;
-    };
-
-    std::thread([this, checkFunc, setupFunc]() {
-        for (int i = 0; i < 100; ++i) {
-            if (checkFunc()) {
-                log_->debug("[PE] BakkesMod patch detected.");
-                setupFunc();
-                return;
-            }
-            Sleep(6000);
-        }
-
-        log_->warn("[PE] Timeout waiting for BakkesMod patch.");
-        //state_->setStatus(Failed);
-    }).detach();
-
-    return true;
-}
-
-bool
-ProcessEvent::buildPatches() {
-    log_->debug("[PE] build patches");
-    return true;
+    return this->applyDetour();
 }
 
 //auto ProcessEvent::getDispatchShutdownGate() -> AsyncGate* {
@@ -119,7 +79,6 @@ void* ProcessEvent::getRLFn() {
     return fn;
 }
 
-
 // first jmp after vTable
 void* ProcessEvent::getBakkesTrampolineFn() {
     if (bakkesTrampolineFn_ != nullptr) { return bakkesTrampolineFn_; }
@@ -148,7 +107,7 @@ void* ProcessEvent::getBakkesTrampolineFn() {
     return bakkesTrampolineFn_;
 }
 
-void
+bool
 ProcessEvent::applyDetour() {
     log_->debug("[PE] applyDetour()");
 
@@ -156,14 +115,19 @@ ProcessEvent::applyDetour() {
 
     if (!mutex_->tryAcquire(1/*ms*/)) {
         log_->warn("[PE] Already patched -- nothing to apply");
-        return;
+        return true;
     }
 
     log_->debug("[PE] applying detour at: {}", getRLFn());
-    detour_->attach(getRLFn(), (void*)&handleFunction);
+    auto detoured = detour_->attach(getRLFn(), (void*)&handleFunction);
 
-    log_->debug("[PE] detoured");
-    appliedGate_->setReady();
+    if (detoured) {
+        log_->debug("[PE] detoured");
+        appliedGate_->setReady();
+        return true;
+    }
+    log_->error("[PE] attach() returned error");
+    return false;
 }
 
 void
@@ -204,7 +168,7 @@ void ProcessEvent::printStr(const std::string& prefix, const std::string& str) {
     __try {
         printf("  -> %s: %s\n", prefix.c_str(), str.c_str());
     } __except (EXCEPTION_EXECUTE_HANDLER) {
-        printf("[SEH] assploded\n");
+        printf("[SEH] exploded\n");
     }
 }
 
@@ -212,7 +176,7 @@ auto ProcessEvent::convert(void* params) -> uint8_t* {
     __try {
         return static_cast<uint8_t*>(params);
     } __except (EXCEPTION_EXECUTE_HANDLER) {
-        printf("[SEH] assploded on convert\n");
+        printf("[SEH] exploded on convert\n");
         return nullptr;
     }
 }

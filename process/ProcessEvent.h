@@ -124,7 +124,7 @@ class ProcessEvent : public IProcessEvent {
 
     static auto convert(void *params) -> uint8_t *;
 
-    void applyDetour();
+    bool applyDetour();
     void removeDetour();
 
     static void __fastcall handleFunction(UObject* self, UFunction* fn, void* paramsPtr, void* resultPtr);

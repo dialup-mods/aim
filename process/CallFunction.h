@@ -113,7 +113,7 @@ class CallFunction : public ICallFunction {
     void registerTask(std::shared_ptr<TaskDefinition> def) override;
     void releaseTask(std::shared_ptr<TaskDefinition> def) override;
     void clearTasks() override;
-    void* getRLFn();
+    void* getAddress();
     void* getBakkesTrampolineFn();
     
     const std::shared_ptr<MutexGuard>& getMutex() const { return mutex_; }

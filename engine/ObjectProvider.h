@@ -3,17 +3,16 @@
 #include <string>
 #include <typeindex>
 
+#include "ILogger.h"
 #include "IModule.h"
 #include "IObjectProvider.h"
-#include "ILogger.h"
+#include "IRuntime.h"
 #include "SDK.h"
 
 class PluginState;
 class AsyncGate;
 class IRuntime;
-#include "StringUtil.h"
 
-#include "IRuntime.h"
 using r = Runtime;
 
 class ObjectProvider : public IObjectProvider {
@@ -43,6 +42,7 @@ class ObjectProvider : public IObjectProvider {
 
     std::unordered_map<std::string, UClass*, TransparentStringHash, std::equal_to<>> classNameToClass_;
 
+    // UE's `StaticClass`
     template<typename T>
     UClass* classOf() {
         static UClass* cls = resolveClass(T::className);
@@ -74,27 +74,7 @@ class ObjectProvider : public IObjectProvider {
         }
     }
 
-
-    //bool isUStruct(const UObject* obj) {
-    //    if (!obj) return false;
-
-    //    // Reinterpret and sanity-check layout
-    //    const auto* s = reinterpret_cast<const UStruct*>(obj);
-
-    //    // UStruct always has PropertySize and Children
-    //    return s->PropertySize >= 0
-    //        && s->Children != nullptr;
-    //}
-    //bool isUClass(const UObject* obj) {
-    //    if (!isUStruct(obj)) return false;
-
-    //    const auto* cls = reinterpret_cast<const UClass*>(obj);
-
-    //    // UClass-only invariant
-    //    return cls->ClassDefaultConstructor != nullptr;
-    //}
     std::unordered_map<UClass*, UObject*> ClassToCDO_;
-
     void populateClassToCDO() {
         for (UObject* obj : r::uobject::game_pool::ref()) {
             if (!obj) continue;
@@ -124,16 +104,6 @@ class ObjectProvider : public IObjectProvider {
         }
         return nullptr;
     }
-
-    //static UClass* StaticClass() {
-    //    static UClass* cls = nullptr;
-    //    if (!cls) {
-    //        cls = FindClassByCDOPredicate([](UObject* cdo) {
-    //            return /* identify this type */;
-    //        });
-    //    }
-    //    return cls;
-    //}
 
     // fixme
     // replaced with adapter-based lookup + cache.
@@ -182,6 +152,31 @@ class ObjectProvider : public IObjectProvider {
         return name.find("Default__") == std::string::npos && name.find("Archetype") == std::string::npos &&
             name.find("PostGameLobby") == std::string::npos && name.find("Test") == std::string::npos;
     }
+
+
+
+    // TODO: refactor to use new Runtime module
+    // TODO: determine what's still useful
+    // TODO: rewrite anything using string comparisons for searching
+    // TODO: add tests
+    //bool isUStruct(const UObject* obj) {
+    //    if (!obj) return false;
+
+    //    // Reinterpret and sanity-check layout
+    //    const auto* s = reinterpret_cast<const UStruct*>(obj);
+
+    //    // UStruct always has PropertySize and Children
+    //    return s->PropertySize >= 0
+    //        && s->Children != nullptr;
+    //}
+    //bool isUClass(const UObject* obj) {
+    //    if (!isUStruct(obj)) return false;
+
+    //    const auto* cls = reinterpret_cast<const UClass*>(obj);
+
+    //    // UClass-only invariant
+    //    return cls->ClassDefaultConstructor != nullptr;
+    //}
 
     // usage:
     // forEachObject<UFunction>([](UFunction* fn) {
