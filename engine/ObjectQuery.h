@@ -11,7 +11,7 @@
 
 #include "ILogger.h"
 #include "IModule.h"
-#include "IObjectProvider.h"
+#include "IObjectQuery.h"
 #include "IRuntime.h"
 #include "SDK.h"
 
@@ -35,7 +35,7 @@ struct TransparentStringHash {
     }
 };
 
-class AIM_API ObjectProvider : public IObjectProvider {
+class AIM_API ObjectQuery : public IObjectQuery {
     AIM_INJECTABLE(ObjectProvider)
 
     AIM_INJECT(ILogger, log)
@@ -49,17 +49,30 @@ private:
 
 public:
 
-    ObjectProvider() {
+    ObjectQuery() {
         buildClassNameCacheFromCDOs();
+        populateClassToCDO();
     }
 
-    // fixme
-    // replaced with adapter-based lookup + cache.
+    // UE's `StaticClass`
     template<typename T>
-    auto getInstanceOf() -> T* {
-        if (!std::is_base_of_v<UObject, T>) { return nullptr; }
+    auto classOf() -> UClass* {
+        static UClass* cls = resolveClass(T::className);
+        return cls;
+    }
 
-        const UClass* wantedClass = r::uclass::find(T::className);
+    auto resolveClass(std::string_view className) -> UClass* override {
+        auto it = classNameToClass_.find(className);
+        if (it != classNameToClass_.end())
+            return it->second;
+
+        // Optional: diagnostics
+        log_->warn("missing: {}", className);
+        return nullptr;
+    }
+
+    auto getFirst(std::string_view className) -> UObject* override {
+        const UClass* wantedClass = r::uclass::find(className);
 
         const auto& objects = r::uobject::game_pool::ref();
         for (int i = objects.size(); i-- > 0; ) {
@@ -67,26 +80,27 @@ public:
             if (!uObject) { continue; }
             if (uObject->ObjectFlags & RF_DefaultOrArchetypeFlags) { continue; }
             if (r::types::isa(uObject->Class, wantedClass)) {
-                return static_cast<T*>(uObject);
+                return uObject;
             }
         }
         return nullptr;
     }
 
-    template<typename T>
-    auto getAllInstancesOf() -> std::vector<T*> {
-        std::vector<T*> matchingObjs;
-        if (!std::is_base_of_v<UObject, T>) { return matchingObjs; }
+    auto getAll(std::string_view className) -> std::vector<UObject*>  override {
+        const auto* wantedClass = r::uclass::find(className);
+        if (!wantedClass) {
+            printf("Given class name is unknown. Cannot proceed with lookup");
+            return {};
+        }
 
-        const UClass* wantedClass = r::uclass::find(T::className);
-
+        std::vector<UObject*> matchingObjs;
         const auto& objects = r::uobject::game_pool::ref();
         for (int i = objects.size(); i-- > 0; ) {
             UObject* uObject = objects.at(i);
             if (!uObject) { continue; }
             if (uObject->ObjectFlags & RF_DefaultOrArchetypeFlags) { continue; }
             if (r::types::isa(uObject->Class, wantedClass)) {
-                matchingObjs.emplace_back(static_cast<T*>(uObject));
+                matchingObjs.emplace_back(uObject);
             }
         }
         return matchingObjs;
@@ -101,22 +115,6 @@ public:
             name.find("PostGameLobby") == std::string::npos && name.find("Test") == std::string::npos;
     }
 
-    // UE's `StaticClass`
-    template<typename T>
-    auto classOf() -> UClass* {
-        static UClass* cls = resolveClass(T::className);
-        return cls;
-    }
-
-    auto resolveClass(std::string_view className) -> UClass* {
-        auto it = classNameToClass_.find(className);
-        if (it != classNameToClass_.end())
-            return it->second;
-
-        // Optional: diagnostics
-        log_->warn("missing: {}", className);
-        return nullptr;
-    }
 
 private:
     void buildClassNameCacheFromCDOs() {
@@ -146,7 +144,7 @@ private:
         }
     }
 
-    UClass* FindClassViaCDO(std::function<bool(UObject*)> cdoPredicate) {
+    UClass* FindClassViaCDO(const std::function<bool(UObject*)> &cdoPredicate) {
         for (UObject* obj : r::uobject::game_pool::ref()) {
             if (!obj) continue;
 
