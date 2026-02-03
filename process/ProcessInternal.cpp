@@ -52,7 +52,7 @@ void ProcessInternal::clearTasks() {
     dispatch_->clearTasks();
 }
 
-void
+bool
 ProcessInternal::applyDetour() {
     log_->debug("[PI] applyDetour()");
 
@@ -60,29 +60,37 @@ ProcessInternal::applyDetour() {
 
     if (!mutex_->tryAcquire(1/*ms*/)) {
         log_->warn("[PI] Already patched -- nothing to apply");
-        return;
+        return false;
     }
 
     log_->debug("[PI] applying detour at: {}", findAddress());
-    detour_->attach(findAddress(), (void*)&handleFunction);
+    if (!detour_->attach(findAddress(), (void*)&handleFunction)) {
+        log_->debug("[PI] failed to apply detour at: {}", findAddress());
+        return false;
+    }
 
     log_->debug("[PI] detoured");
     appliedGate_->setReady();
+    return true;
 }
 
-void ProcessInternal::removeDetour() {
+bool ProcessInternal::removeDetour() {
     log_->debug("[PI] removeDetour()");
     dispatch_->shutdown();
     mutex_->release();
     // wait for any in-flight handlers to finish
     if (!mutex_->waitForUnlock(5000)) {
         log_->error("Timeout waiting for ProcessEvent handlers to finish");
-        return;
+        return false;
     }
-    detour_->detach();
+    if (!detour_->detach()) {
+        log_->error("[PI] Failed to detach detour");
+        return false;
+    }
     //removedGate_->setReady();
     teardownFence_->release("PI");
     std::this_thread::sleep_for(std::chrono::seconds(1));
+    return true;
 }
 
 bool ProcessInternal::waitForUnlock(DWORD timeoutMs) const {

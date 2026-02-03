@@ -10,7 +10,7 @@ set(SOURCES
     ${CMAKE_SOURCE_DIR}/${PROJECT_NAME}.cpp
     ${CMAKE_SOURCE_DIR}/dispatch/Dispatch.cpp
     ${CMAKE_SOURCE_DIR}/engine/EngineLocator.cpp
-    ${CMAKE_SOURCE_DIR}/engine/ObjectProvider.cpp
+    ${CMAKE_SOURCE_DIR}/engine/ObjectQuery.cpp
     ${CMAKE_SOURCE_DIR}/model/UEModel.cpp
     ${CMAKE_SOURCE_DIR}/process/CallFunction.cpp
     ${CMAKE_SOURCE_DIR}/process/ProcessEvent.cpp
@@ -67,9 +67,23 @@ install(FILES
 	${CMAKE_CURRENT_SOURCE_DIR}/build/AIM.pdb
 	DESTINATION ${GAME_BINARY_PATH})
 
-install(DIRECTORY include/v1/ DESTINATION ${DIALUP_DIR}/include/v1)
+# Public API headers. Intentionally flattened.
+set(PUBLIC_INTERFACE_HEADERS
+    engine/IObjectQuery.h
+    process/ICallFunction.h
+    process/IProcessEvent.h
+    process/IProcessInternal.h
+    task/CallbackBuilder.h
+    task/CallbackWrapper.h
+    task/EventContext.h
+    task/TaskBuilder.h
+    task/TaskStructs.h
+)
 
+install(FILES ${PUBLIC_INTERFACE_HEADERS} DESTINATION ${DIALUP_INSTALL_DIR}/include/v1)
 
+find_package(DialUp REQUIRED PATHS ${DIALUP_INSTALL_DIR})
+target_link_libraries(${PROJECT_NAME} PRIVATE DialUp::DialUp)
 find_package(DialUp-SDK REQUIRED PATHS ${DIALUP_INSTALL_DIR}/sdk-plugin)
 target_link_libraries(${PROJECT_NAME} PRIVATE DialUp-SDK::DialUp-SDK)
 

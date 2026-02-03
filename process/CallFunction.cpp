@@ -65,23 +65,23 @@ bool CallFunction::applyDetour() {
     
     // run inside main event loop
     // to prevent race conditions
-    processEvent_->registerTask(TaskBuilder()
-            .name("Apply CallFunction patch")
-            .functionName("Function Engine.Interaction.Tick")
-            .phase(HookPhase::Post)
-            .callback([this](InvocationContext& ctx) {
-                printf("[CF] applying detour...");
+    processEvent_->enableTask(TaskBuilder()
+        .name("Apply CallFunction patch")
+        .functionName("Function Engine.Interaction.Tick")
+        .phase(HookPhase::Post)
+        .callback([this](InvocationContext& ctx) {
+            printf("[CF] applying detour...");
 
-                if (!mutex_->tryAcquire(1 /*ms*/)) {
-                    log_->warn("[CF] Already patched -- nothing to apply");
-                    return;
-                }
+            if (!mutex_->tryAcquire(1 /*ms*/)) {
+                log_->warn("[CF] Already patched -- nothing to apply");
+                return;
+            }
 
-                printf("[CF] detoured");
-                appliedGate_->setReady();
-            })
-            .once()
-            .build());
+            printf("[CF] detoured");
+            appliedGate_->setReady();
+        })
+        .once()
+        .build());
 
     return true;
 }
@@ -89,19 +89,19 @@ bool CallFunction::applyDetour() {
 bool CallFunction::removeDetour() {
     // run inside main event loop
     // to prevent race conditions
-    processEvent_->registerTask(TaskBuilder()
-            .name("Apply CallFunction patch [remove]")
-            .functionName("Function Engine.Interaction.Tick")
-            .phase(HookPhase::Post)
-            .callback([this](InvocationContext& ctx) {
-                printf("[CF] removing detour...\n");
+    processEvent_->enableTask(TaskBuilder()
+        .name("Apply CallFunction patch [remove]")
+        .functionName("Function Engine.Interaction.Tick")
+        .phase(HookPhase::Post)
+        .callback([this](InvocationContext& ctx) {
+            printf("[CF] removing detour...\n");
 
-                printf("[CF] removed\n");
-                this->mutex_->release();
-                this->removedGate_->setReady();
-            })
-            .once()
-            .build());
+            printf("[CF] removed\n");
+            this->mutex_->release();
+            this->removedGate_->setReady();
+        })
+        .once()
+        .build());
 
     return true;
 }

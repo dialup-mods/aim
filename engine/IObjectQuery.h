@@ -5,7 +5,7 @@
 
 class UObject; class UClass;
 
-class AIM_API IObjectQuery : public IModule {
+class IObjectQuery : public IModule {
 public:
     AIM_INJECTABLE(IObjectProvider)
 

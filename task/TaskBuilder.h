@@ -1,4 +1,6 @@
 ﻿#pragma once
+#include <cassert>
+
 #include "CallbackBuilder.h"
 #include "TaskStructs.h"
 #include "IModule.h"
@@ -9,7 +11,7 @@ enum class ReturnType { Void, Bool };
 
 namespace c = callbackbuilder;
 
-class AIM_API TaskBuilder : IModule {
+class TaskBuilder : IModule {
     AIM_INJECTABLE(TaskBuilder)
 
     std::shared_ptr<TaskDefinition> task_;
@@ -54,8 +56,39 @@ class AIM_API TaskBuilder : IModule {
         return *this;
     }
 
-    auto once(bool once = true) -> TaskBuilder& {
-        task_->once = once;
+    auto preStep(auto&& f) -> TaskBuilder& {
+        task_->preStep = callbackbuilder::wrapCallback(std::forward<decltype(f)>(f));
+        return *this;
+    }
+
+    auto callback(auto&& f) -> TaskBuilder& {
+        task_->callback = callbackbuilder::wrapCallback(std::forward<decltype(f)>(f));
+        return *this;
+    }
+
+    auto callbackBlocking(auto&& f) -> TaskBuilder& {
+        task_->callbackBlocking = callbackbuilder::wrapWithReturn(std::forward<decltype(f)>(f));
+        task_->isBlocking = true;
+        return *this;
+    }
+
+    auto runCondition(auto&& f) -> TaskBuilder& {
+        task_->runCondition = callbackbuilder::wrapWithReturn(std::forward<decltype(f)>(f));
+        return *this;
+    }
+
+    auto successCondition(auto&& f) -> TaskBuilder& {
+        task_->successCondition = callbackbuilder::wrapWithReturn(std::forward<decltype(f)>(f));
+        return *this;
+    }
+
+    auto onSuccessCallback(auto&& f) -> TaskBuilder& {
+        task_->onSuccessCallback = callbackbuilder::wrapCallback(std::forward<decltype(f)>(f));
+        return *this;
+    }
+
+    auto onFailureCallback(auto&& f) -> TaskBuilder& {
+        task_->onFailureCallback = callbackbuilder::wrapCallback(std::forward<decltype(f)>(f));
         return *this;
     }
 
@@ -64,40 +97,16 @@ class AIM_API TaskBuilder : IModule {
         return *this;
     }
 
-    template<typename F>
-    auto callback(F&& f) -> TaskBuilder& {
-        task_->callback = c::wrapCallback(std::forward<F>(f));
+    auto once(bool once = true) -> TaskBuilder& {
+        task_->once = once;
         return *this;
     }
-    template<typename F>
-    auto callbackBlocking(F&& f) -> TaskBuilder& {
-        task_->callbackBlocking = c::wrapCallback(std::forward<F>(f));
-        return *this;
-    }
-    template<typename F>
-    auto preStep(F&& f) -> TaskBuilder& {
-        task_->preStep = c::wrapCallback(std::forward<F>(f));
-        return *this;
-    }
-    template<typename F>
-    auto successCondition(F&& f) -> TaskBuilder& {
-        task_->successCondition = c::wrapCallback(std::forward<F>(f));
-        return *this;
-    }
-    template<typename F>
-    auto onSuccessCallback(F&& f) -> TaskBuilder& {
-        task_->onSuccessCallback = c::wrapCallback(std::forward<F>(f));
-        return *this;
-    }
-    template<typename F>
-    auto onFailureCallback(F&& f) -> TaskBuilder& {
-        task_->onFailureCallback = c::wrapCallback(std::forward<F>(f));
-        return *this;
-    }
+
     auto registerTask(std::shared_ptr<TaskDefinition>& task) -> TaskBuilder& {
         task_->registerTask = std::move(task);
         return *this;
     }
+
     auto maxAttempts(int maxAttempts) -> TaskBuilder& {
         if (maxAttempts > 0) {
             task_->maxAttempts = std::move(maxAttempts);
@@ -106,6 +115,7 @@ class AIM_API TaskBuilder : IModule {
         }
         return *this;
     }
+
     auto timeoutSeconds(const float timeoutSeconds) -> TaskBuilder& {
         if (timeoutSeconds > 0) {
             task_->timeoutSeconds = timeoutSeconds;
@@ -121,10 +131,10 @@ class AIM_API TaskBuilder : IModule {
 
         if (doesSomething()) {
             return std::move(task_);
-        } else {
-            MessageBoxA(nullptr, "task must do something", "TaskBuilder", MB_OK | MB_ICONERROR | MB_SYSTEMMODAL);
         }
-        throw std::runtime_error("RecoveryTaskBuilder: Cannot build a task that does nothing.");
+
+        assert("TaskBuilder: Cannot build a task that does nothing.");
+        return nullptr;
     }
 
     auto retry(const int attempts, const float seconds) -> TaskBuilder& {

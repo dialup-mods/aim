@@ -1,3 +1,10 @@
 @PACKAGE_INIT@
 
-include("${CMAKE_CURRENT_LIST_DIR}/AIMTargets.cmake")
+include("${CMAKE_CURRENT_LIST_DIR}/@PROJECT_NAME@Targets.cmake")
+
+# Dial-Up must match Rocket League's ABI and is intentionally flattened.
+# Consumers use a single binary contract regardless of config.
+set_target_properties(DialUp::DialUp PROPERTIES
+    IMPORTED_LOCATION "${PACKAGE_PREFIX_DIR}/bin/AIM.dll"
+    IMPORTED_IMPLIB   "${PACKAGE_PREFIX_DIR}/lib/AIM.lib"
+)

@@ -105,8 +105,8 @@ class ProcessEvent : public IProcessEvent {
     }
 
     void shutdown();
-    void registerTask(std::shared_ptr<TaskDefinition> def) override;
-    void releaseTask(std::shared_ptr<TaskDefinition> def) override;
+    void enableTask(std::shared_ptr<TaskDefinition> def) override;
+    void disableTask(std::shared_ptr<TaskDefinition> def) override;
     void clearTasks();
     void* getRLFn();
 
@@ -125,7 +125,8 @@ class ProcessEvent : public IProcessEvent {
     static auto convert(void *params) -> uint8_t *;
 
     bool applyDetour();
-    void removeDetour();
+
+    bool removeDetour();
 
     static void __fastcall handleFunction(UObject* self, UFunction* fn, void* paramsPtr, void* resultPtr);
 };

@@ -17,13 +17,6 @@ TaskQueue::init() {
 }
 
 void
-TaskQueue::queueFunction(std::function<void()> func) {
-    std::lock_guard lock(tasksMutex_);
-    fnQueue_.push_back(std::move(func));
-    printf("[QF] queueFunction() called from thread %p\n", GetCurrentThread());
-}
-
-void
 TaskQueue::shutdown() {
     std::lock_guard lock(tasksMutex_);
     fnQueue_.clear();

@@ -3,7 +3,14 @@
 #include <memory>
 #include <string>
 
+#include "CallbackWrapper.h"
 #include "EventContext.h"
+
+#ifdef AIM_BUILD
+#define AIM_API __declspec(dllexport)
+#else
+#define AIM_API __declspec(dllimport)
+#endif
 
 // Task Scheduling Note:
 //
@@ -71,6 +78,13 @@ enum class TaskState {
     Failed,    // it's dead, Jim
 };
 
+struct ITask {
+    virtual ~ITask() = default;
+    virtual void invoke(InvocationContext&) = 0;
+    virtual bool once() const = 0;
+    virtual HookPhase phase() const = 0;
+};
+
 struct TaskDefinition {
     TaskDefinition() = default;
 
@@ -82,67 +96,37 @@ struct TaskDefinition {
     bool isBlocking{ false };
     bool once{ false };
 
-    std::function<void(InvocationContext&)> callback{};
+    CallbackWrapper callback{};
+    CallbackWrapper callbackBlocking{};  // returns bool
 
-    std::function<bool(InvocationContext&)> callbackBlocking{};
+    CallbackWithReturnWrapper runCondition{};
+    CallbackWithReturnWrapper successCondition{};
 
-    // TODO: run only if condition is met
-    std::function<bool(InvocationContext&)> runCondition{};
+    CallbackWrapper preStep{};
+    CallbackWrapper onSuccessCallback{};
+    CallbackWrapper onFailureCallback{};
+    CallbackWrapper afterSuccessCallback{};
+    CallbackWrapper afterFailureCallback{};
 
-    // These options are only valid when successCondition is set --
-    std::function<bool(InvocationContext&)> successCondition{};
-    std::function<void(InvocationContext&)> preStep{};
-    std::function<void(InvocationContext&)> onSuccessCallback{};
-    std::function<void(InvocationContext&)> onFailureCallback{};
-    std::function<void(InvocationContext&)> afterSuccessCallback{};
-    std::function<void(InvocationContext&)> afterFailureCallback{};
     std::shared_ptr<TaskDefinition> registerTask;
     bool nextTick{ false };
 
     int maxAttempts{ 15 };
     float timeoutSeconds{ 5.0f };
-    // ------------------------------------------------------------
 
-    // do not set. internal vars
     int attempt{ 0 };
     float elapsedSeconds{ 0.0f };
     TaskState state{ TaskState::Pending };
 
     bool operator==(const TaskDefinition& other) const { return this->id == other.id; }
 
-    // fixme
-    // bool TaskDefinition::deepEquals(const TaskDefinition& other) const {
-    //    return id == other.id &&
-    //           name == other.name &&
-    //           functionName == other.functionName &&
-    //           timeoutSeconds == other.timeoutSeconds &&
-    //           phase == other.phase &&
-    //}
+    // Still move-only (CallbackWrappers are move-only)
+    TaskDefinition(const TaskDefinition&) = delete;
+    TaskDefinition& operator=(const TaskDefinition&) = delete;
 
-    // ✅ Move-only
-    // for copying for logging/debugging
-    // make a TaskSummary cheap copyable version
-    // i.e. a version with no lambdas
-    //
-    // struct TaskSummary {
-    //     std::string functionName;
-    //     int id;
-    //     // maybe: phase, name, etc.
-    // };
-    //
-    // TaskSummary summary() const {
-    //     return TaskSummary{
-    //         .functionName = functionName,
-    //         .id = id,
-    //         // add more metadata here
-    //     };
-    // }
+    TaskDefinition(TaskDefinition&&) = default;
+    TaskDefinition& operator=(TaskDefinition&&) = default;
 
-    //    TaskDefinition(const TaskDefinition&) = delete;
-    //    TaskDefinition& operator=(const TaskDefinition&) = delete;
-    //
-    //    TaskDefinition(TaskDefinition&&) = default;
-    //    TaskDefinition& operator=(TaskDefinition&&) = default;
     auto describe() const -> std::string {
         std::string phaseStr;
         switch (this->phase) {
@@ -154,3 +138,88 @@ struct TaskDefinition {
             ", functionIndex:" + std::to_string(this->functionIndex) + "}";
     }
 };
+
+//struct AIM_API TaskDefinition : public ITask {
+//    TaskDefinition() = default;
+//
+//    int32_t id{ -1 };
+//    std::string name{ "unknown" };
+//    std::string functionName{ "unknown" };
+//    int32_t functionIndex;
+//    HookPhase phase;
+//    bool isBlocking{ false };
+//
+//    bool once{ false };
+//
+//    std::function<void(InvocationContext&)> callback{};
+//    std::function<bool(InvocationContext&)> callbackBlocking{};
+//
+//    // run only if condition is met
+//    std::function<bool(InvocationContext&)> runCondition{};
+//
+//    // These options are only valid when successCondition is set --
+//    std::function<bool(InvocationContext&)> successCondition{};
+//    std::function<void(InvocationContext&)> preStep{};
+//    std::function<void(InvocationContext&)> onSuccessCallback{};
+//    std::function<void(InvocationContext&)> onFailureCallback{};
+//    std::function<void(InvocationContext&)> afterSuccessCallback{};
+//    std::function<void(InvocationContext&)> afterFailureCallback{};
+//
+//    std::shared_ptr<TaskDefinition> registerTask;
+//    bool nextTick{ false };
+//
+//    int maxAttempts{ 15 };
+//    float timeoutSeconds{ 5.0f };
+//    // ------------------------------------------------------------
+//
+//    // do not set. internal vars
+//    int attempt{ 0 };
+//    float elapsedSeconds{ 0.0f };
+//    TaskState state{ TaskState::Pending };
+//
+//    bool operator==(const TaskDefinition& other) const { return this->id == other.id; }
+//
+//    // fixme
+//    // bool TaskDefinition::deepEquals(const TaskDefinition& other) const {
+//    //    return id == other.id &&
+//    //           name == other.name &&
+//    //           functionName == other.functionName &&
+//    //           timeoutSeconds == other.timeoutSeconds &&
+//    //           phase == other.phase &&
+//    //}
+//
+//    // ✅ Move-only
+//    // for copying for logging/debugging
+//    // make a TaskSummary cheap copyable version
+//    // i.e. a version with no lambdas
+//    //
+//    // struct TaskSummary {
+//    //     std::string functionName;
+//    //     int id;
+//    //     // maybe: phase, name, etc.
+//    // };
+//    //
+//    // TaskSummary summary() const {
+//    //     return TaskSummary{
+//    //         .functionName = functionName,
+//    //         .id = id,
+//    //         // add more metadata here
+//    //     };
+//    // }
+//
+//    //    TaskDefinition(const TaskDefinition&) = delete;
+//    //    TaskDefinition& operator=(const TaskDefinition&) = delete;
+//    //
+//    //    TaskDefinition(TaskDefinition&&) = default;
+//    //    TaskDefinition& operator=(TaskDefinition&&) = default;
+//    auto describe() const -> std::string {
+//        std::string phaseStr;
+//        switch (this->phase) {
+//            case HookPhase::Pre: phaseStr = "Pre"; break;
+//            case HookPhase::Post: phaseStr = "Post"; break;
+//            case HookPhase::Gated: phaseStr = "Gated"; break;
+//        }
+//        return "{name:" + this->name + ", fn:" + this->functionName + ", phase:" + phaseStr + ", id:" + std::to_string(this->id) +
+//            ", functionIndex:" + std::to_string(this->functionIndex) + "}";
+//    }
+//};

@@ -19,7 +19,7 @@ int32_t Dispatch::getNextID() {
     return counter_.fetch_add(1, std::memory_order_relaxed);
 }
 
-void Dispatch::registerTask(std::shared_ptr<TaskDefinition>& task) {
+void Dispatch::registerTask(std::shared_ptr<TaskDefinition> task) {
     log_->debug("[Dispatch] registering task: {}", TaskBuilder::describe(*task));
 
     auto fn = r::ufunction::find(task->functionName);
@@ -127,11 +127,11 @@ bool Dispatch::runTasksForPhase(
                 printf("calling callback");
                 currentTask->callback(ctx);
             }
-            if (currentTask->callbackBlocking) {
-                if (currentTask->callbackBlocking(ctx)) {
-                    shouldBlock = true;
-                }
-            }
+            //if (currentTask->callbackBlocking) {
+            //    if (currentTask->callbackBlocking(ctx)) {
+            //        shouldBlock = true;
+            //    }
+            //}
             if (currentTask->once) {
                 currentTask->state = TaskState::Completed;
                 task = vec.erase(task);
@@ -198,7 +198,12 @@ void Dispatch::dispatchGated(const int fnIndex, InvocationContext& context) {
                     }
                     
                     if (currentTask->onSuccessCallback) {
-                        taskQueue_->queueFunction(bindContext(currentTask->onSuccessCallback, context));
+                        // TODO: verify task lifetime vs callback execution timing
+                        // Pretty sure the task dies before this runs but need to actually check
+                        auto callback = std::make_shared<CallbackWrapper>(std::move(currentTask->onSuccessCallback));
+                        taskQueue_->queueFunction([callback, ctx = context]() mutable {
+                            (*callback)(ctx);
+                        });
                     }
                 }
             } else {
@@ -206,14 +211,19 @@ void Dispatch::dispatchGated(const int fnIndex, InvocationContext& context) {
                     (currentTask->timeoutSeconds > 0.0f && currentTask->elapsedSeconds >= currentTask->timeoutSeconds) ||
                     (currentTask->maxAttempts > 0 && currentTask->attempt + 1 >= currentTask->maxAttempts)
                     ) {
-                    log_->logNoFmt("[WARN] Task " + currentTask->name + " failed " + std::to_string(currentTask->elapsedSeconds) + "s");
-                    
-                    currentTask->state = TaskState::Failed;
-                    
-                    if (currentTask->onFailureCallback) {
-                        taskQueue_->queueFunction(bindContext(currentTask->onFailureCallback, context));
+                        log_->logNoFmt("[WARN] Task " + currentTask->name + " failed " + std::to_string(currentTask->elapsedSeconds) + "s");
+
+                        currentTask->state = TaskState::Failed;
+
+                        if (currentTask->onFailureCallback) {
+                            // TODO: verify task lifetime vs callback execution timing
+                            // Pretty sure the task dies before this runs but need to actually check
+                            auto callback = std::make_shared<CallbackWrapper>(std::move(currentTask->onFailureCallback));
+                            taskQueue_->queueFunction([callback, ctx = context]() mutable {
+                                (*callback)(ctx);
+                            });
+                        }
                     }
-                }
 
                 currentTask->attempt++;
             }

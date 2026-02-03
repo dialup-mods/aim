@@ -46,5 +46,5 @@ private:
     std::unique_ptr<PLH::x64Detour> detour_;
     std::unique_ptr<PLH::ZydisDisassembler> dis_;
     void* target_ = nullptr;
-    uint64_t trampoline_ = 0;  // Stores trampoline address
+    uint64_t trampoline_ = 0;
 };

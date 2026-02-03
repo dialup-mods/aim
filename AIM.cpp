@@ -10,22 +10,21 @@
 #include "Detour.h"
 
 #include "TaskBuilder.h"
-#include "ITaskBuilder.h"
 
 #include "ModuleLoader.h"
 #include "TaskQueue.h"
 // #include "ConsoleInterpreter.h"
 #include "EngineLocator.h"
 #include "ObjectQuery.h"
-#include "PluginFence.h"
+#include "v1/PluginFence.h"
 
 #include "CallFunction.h"
 //#include "ChatboxConsole.h"
-#include "MutexGuard.h"
+#include "v1/MutexGuard.h"
 #include "ProcessEvent.h"
 #include "ProcessInternal.h"
 
-#include "Resolver.h"
+#include "v1/IResolver.h"
 
 #include "ICallFunction.h"
 #include "IProcessEvent.h"
@@ -252,8 +251,8 @@ AIM::loadDetourModules() {
     pe->init();
 
     pe->onDetoured([pi, log = getLogger()] {
-        log->debug("ProcessEvent is detoured, loading PI...");
-        pi->init();
+        //log->debug("ProcessEvent is detoured, loading PI...");
+        //pi->init();
     });
 
     //registerModule(
@@ -340,7 +339,7 @@ AIM::startup() {
         //
         std::vector<AsyncGate*> processGates;
         processGates.emplace_back(getResolver()->resolve<AsyncGate>("PE-AsyncGate").get());
-        processGates.emplace_back(getResolver()->resolve<AsyncGate>("PI-AsyncGate").get());
+        //processGates.emplace_back(getResolver()->resolve<AsyncGate>("PI-AsyncGate").get());
         //processGates.emplace_back(getResolver()->resolve<AsyncGate>("CF-AsyncGate").get());
 
         AsyncGate::onAllReady(processGates, [this] {
@@ -397,29 +396,27 @@ void AIM::testToast() {
     // and it shows a notification in the friends, etc panel
     //UNotification_TA* notification;
 
-    processEvent->registerTask(TaskBuilder()
-            .name("Toast")
-            .functionName("Function Engine.HUD.PostRender")
-            .phase(HookPhase::Post)
-            .callback([objectQuery](InvocationContext& ctx) {
-                auto* mgr = objectQuery->getFirst<UNotificationManager_TA>();
-                auto* notificationClass = objectQuery->classOf<UGenericNotification_TA>();
-                UNotification_TA* ret = mgr->PopUpOnlyNotification(notificationClass);
-                ret->SetTitle(FString(L"Welcome."));
-                ret->SetBody(FString(L"You've got mail!"));
-            })
-            .once()
-            .build());
+    //processEvent->enableTask(TaskBuilder()
+    //        .name("Toast")
+    //        .functionName("Function Engine.HUD.PostRender")
+    //        .phase(HookPhase::Post)
+    //        .callback([objectQuery](InvocationContext& ctx) {
+    //            auto* mgr = objectQuery->getFirst<UNotificationManager_TA>();
+    //            auto* notificationClass = objectQuery->classOf<UGenericNotification_TA>();
+    //            UNotification_TA* ret = mgr->PopUpOnlyNotification(notificationClass);
+    //            ret->SetTitle(FString(L"Welcome."));
+    //            ret->SetBody(FString(L"You've got mail!"));
+    //        })
+    //        .once()
+    //        .build());
 }
 
 auto AIM::registerPublicInterfaces() const -> std::vector<PublicInterface> {
-    // upcast in plugin where both types are known
     return {
         expose<IProcessEvent>(resolve<ProcessEvent>())
         , expose<ICallFunction>(resolve<CallFunction>())
         , expose<IProcessInternal>(resolve<ProcessInternal>())
         , expose<IObjectQuery>(resolve<IObjectQuery>())
-        , expose<ITaskBuilder>(resolve<ITaskBuilder>())
     };
 }
 
@@ -450,9 +447,9 @@ AIM::shutdown() {
 
     log->trace("remove");
     teardownFence->onReady([this] {
-        printf("teardown ready\n");
         staticResolver_ = nullptr;
         Runtime::yeet();
+        printf("setting AIM yeetable\n");
         setPluginYeetable();
     });
 

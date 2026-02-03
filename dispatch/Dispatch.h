@@ -47,7 +47,7 @@ public:
 //    auto getShutdownGate() -> AsyncGate* { return shutdownGate_->gate(); }
     
     int32_t getNextID();
-    void registerTask(std::shared_ptr<TaskDefinition>& task);
+    void registerTask(std::shared_ptr<TaskDefinition> task);
     void releaseTask(std::shared_ptr<TaskDefinition>& task);
     
     void shutdown();

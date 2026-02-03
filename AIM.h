@@ -12,6 +12,8 @@ class AIM : public PluginBase<AIM> {
     ~AIM() override = default;
     auto getName() const -> const char* override;
     void startup() override;
+    auto registerPublicInterfaces() const -> std::vector<PublicInterface> override;
+    void shutdown() override;
 
     template<class T>
     static auto classOf(UObject*) -> UClass *;
@@ -21,9 +23,6 @@ class AIM : public PluginBase<AIM> {
 
     void testToast();
 
-    [[nodiscard]] auto registerPublicInterfaces() const -> std::vector<PublicInterface> override;
-    void shutdown() override;
-
     auto modal() -> const char*;
 
     bool createPopulateRuntime();
@@ -31,7 +30,7 @@ class AIM : public PluginBase<AIM> {
     bool loadObjectProvider();
 
     template<class T>
-    [[nodiscard]] bool registerFunctionModuleDependencies(const std::string& prefix);
+    bool registerFunctionModuleDependencies(const std::string& prefix);
     bool loadDetourModules();
 
     template<class T>

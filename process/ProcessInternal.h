@@ -121,9 +121,9 @@ public:
 
     static void *getTrampoline();
 
-    void applyDetour();
+    bool applyDetour();
 
-    void removeDetour();
+    bool removeDetour();
     
     static void __fastcall handleFunction(UObject* self, FFrame& stack, void* result);
 };

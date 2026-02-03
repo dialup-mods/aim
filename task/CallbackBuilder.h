@@ -1,54 +1,83 @@
 ﻿#pragma once
 #include <Windows.h>
-
-#include <functional>
-
-class InvocationContext;
+#include "EventContext.h"
+#include "CallbackWrapper.h"
 
 namespace callbackbuilder {
-template<typename T>
-constexpr bool always_false = false;
 
+// For void callbacks
 template<typename F>
-auto
-wrapCallback(F&& f) {
+auto wrapCallback(F&& f) -> CallbackWrapper {
     using Fn = std::decay_t<F>;
+    auto* ctx = new Fn(std::forward<F>(f));
+
     if constexpr (std::is_invocable_v<Fn, InvocationContext&>) {
-        using R = std::invoke_result_t<Fn, InvocationContext&>;
-        return std::function<R(InvocationContext&)>{ [f = std::forward<F>(f)](InvocationContext& ctx) -> R {
-            __try {
-                if constexpr (std::is_void_v<R>) {
-                    f(ctx);
-                } else {
-                    return f(ctx);
+        // Takes InvocationContext
+        return CallbackWrapper{
+            ctx,
+            [](void* p, InvocationContext& ic) {
+                printf("Invoke callback wrapper\n");
+                __try {
+                    (*static_cast<Fn*>(p))(ic);
+                } __except(EXCEPTION_EXECUTE_HANDLER) {
+                    printf("SEH: Task callback crashed\n");
                 }
-            } __except (EXCEPTION_EXECUTE_HANDLER) {
-                OutputDebugStringA("SEH: Task callback crashed\n");
-                printf("p SEH: Task callback crashed\n");
-                if constexpr (!std::is_void_v<R>) {
-                    return R{}; // Return default value for non-void
-                }
-            }
-        } };
-    } else if constexpr (std::is_invocable_v<Fn>) {
-        // no-args version
-        using R = std::invoke_result_t<Fn>;
-        return std::function<R(InvocationContext&)>{ [f = std::forward<F>(f)](InvocationContext&) -> R {
-            __try {
-                if constexpr (std::is_void_v<R>) {
-                    f();
-                } else {
-                    return f();
-                }
-            } __except (EXCEPTION_EXECUTE_HANDLER) {
-                OutputDebugStringA("SEH: Task callback crashed\n");
-                if constexpr (!std::is_void_v<R>) {
-                    return R{};
-                }
-            }
-        } };
+            },
+            [](void* p) { delete static_cast<Fn*>(p); } // destroy
+        };
     } else {
-        static_assert(always_false<F>, "wrapCallback: lambda must accept InvocationContext& or nothing");
+        // No args
+        return CallbackWrapper{
+            ctx,
+            [](void* p, InvocationContext&) {
+                printf("Invoke callback wrapper\n");
+                __try {
+                    (*static_cast<Fn*>(p))();
+                } __except(EXCEPTION_EXECUTE_HANDLER) {
+                    printf("SEH: Task callback crashed\n");
+                }
+            },
+            [](void* p) { delete static_cast<Fn*>(p); } // destroy
+        };
+    }
+}
+
+// For bool-returning callbacks (conditions, blocking, etc)
+template<typename F>
+auto wrapWithReturn(F&& f) -> CallbackWithReturnWrapper {
+    using Fn = std::decay_t<F>;
+    auto* ctx = new Fn(std::forward<F>(f));
+
+    if constexpr (std::is_invocable_v<Fn, InvocationContext&>) {
+        return CallbackWithReturnWrapper{
+            ctx,
+            [](void* p, InvocationContext& ic) -> bool {
+                printf("Invoke callback wrapper\n");
+                __try {
+                    printf("executing callback wrapper\n");
+                    return (*static_cast<Fn*>(p))(ic);
+                } __except(EXCEPTION_EXECUTE_HANDLER) {
+                    printf("SEH: Condition crashed\n");
+                    return false;
+                }
+            },
+            [](void* p) { delete static_cast<Fn*>(p); } // destroy
+        };
+    } else {
+        return CallbackWithReturnWrapper{
+            ctx,
+            [](void* p, InvocationContext&) -> bool {
+                printf("Invoke callback wrapper\n");
+                __try {
+                    printf("executing callback wrapper\n");
+                    return (*static_cast<Fn*>(p))();
+                } __except(EXCEPTION_EXECUTE_HANDLER) {
+                    printf("SEH: Condition crashed\n");
+                    return false;
+                }
+            },
+            [](void* p) { delete static_cast<Fn*>(p); } // destroy
+        };
     }
 }
 }

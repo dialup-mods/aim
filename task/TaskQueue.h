@@ -18,10 +18,18 @@ class TaskQueue : public IModule {
     ~TaskQueue();
 
     void init();
+
+    template<typename F>
+    void queueFunction(F&& func) {
+        std::lock_guard lock(tasksMutex_);
+        fnQueue_.push_back(std::move(func));
+        printf("[QF] queueFunction() called from thread %p\n", GetCurrentThread());
+    }
+
+
     std::string getName();
     //void __inject_name(std::string name);
 
-    void queueFunction(std::function<void()> task);
     void shutdown();
     void processFunctions();
     

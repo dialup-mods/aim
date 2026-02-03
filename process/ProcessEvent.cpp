@@ -56,11 +56,11 @@ void ProcessEvent::shutdown() {
     removeDetour();
 }
 
-void ProcessEvent::registerTask(std::shared_ptr<TaskDefinition> def) {
-    dispatch_->registerTask(def);
+void ProcessEvent::enableTask(std::shared_ptr<TaskDefinition> def) {
+    dispatch_->registerTask(std::move(def));
 }
 
-void ProcessEvent::releaseTask(std::shared_ptr<TaskDefinition> def) {
+void ProcessEvent::disableTask(std::shared_ptr<TaskDefinition> def) {
     dispatch_->registerTask(def);
 }
 
@@ -115,22 +115,22 @@ ProcessEvent::applyDetour() {
 
     if (!mutex_->tryAcquire(1/*ms*/)) {
         log_->warn("[PE] Already patched -- nothing to apply");
-        return true;
+        return false;
     }
 
     log_->debug("[PE] applying detour at: {}", getRLFn());
-    auto detoured = detour_->attach(getRLFn(), (void*)&handleFunction);
 
-    if (detoured) {
-        log_->debug("[PE] detoured");
-        appliedGate_->setReady();
-        return true;
+    if (!detour_->attach(getRLFn(), (void*)&handleFunction)) {
+        log_->error("[PE] attach() returned error");
+        return false;
     }
-    log_->error("[PE] attach() returned error");
-    return false;
+
+    log_->debug("[PE] detoured");
+    appliedGate_->setReady();
+    return true;
 }
 
-void
+bool
 ProcessEvent::removeDetour() {
     log_->debug("[PE] removeDetour()");
     dispatch_->shutdown();
@@ -138,12 +138,15 @@ ProcessEvent::removeDetour() {
     // wait for any in-flight handlers to finish
     if (!mutex_->waitForUnlock(5000)) {
         log_->error("Timeout waiting for ProcessEvent handlers to finish");
-        return;
+        return false;
     }
-    detour_->detach();
+    if (!detour_->detach()) {
+        log_->error("[PE] Failed to detach detour");
+    }
     //removedGate_->setReady();
     teardownFence_->release("PE");
     std::this_thread::sleep_for(std::chrono::seconds(1));
+    return true;
 }
 
 bool ProcessEvent::waitForUnlock(DWORD timeoutMs) const {
