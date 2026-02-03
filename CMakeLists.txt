@@ -10,7 +10,6 @@ set(SOURCES
     ${CMAKE_SOURCE_DIR}/${PROJECT_NAME}.cpp
     ${CMAKE_SOURCE_DIR}/dispatch/Dispatch.cpp
     ${CMAKE_SOURCE_DIR}/engine/EngineLocator.cpp
-    ${CMAKE_SOURCE_DIR}/engine/ObjectQuery.cpp
     ${CMAKE_SOURCE_DIR}/model/UEModel.cpp
     ${CMAKE_SOURCE_DIR}/process/CallFunction.cpp
     ${CMAKE_SOURCE_DIR}/process/ProcessEvent.cpp
@@ -69,7 +68,7 @@ install(FILES
 
 # Public API headers. Intentionally flattened.
 set(PUBLIC_INTERFACE_HEADERS
-    engine/IObjectQuery.h
+    engine/IRuntime.h
     process/ICallFunction.h
     process/IProcessEvent.h
     process/IProcessInternal.h

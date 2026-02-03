@@ -17,7 +17,7 @@ class TaskQueue : public IModule {
     TaskQueue() = default;
     ~TaskQueue();
 
-    void init();
+    void init() const;
 
     template<typename F>
     void queueFunction(F&& func) {
@@ -25,10 +25,6 @@ class TaskQueue : public IModule {
         fnQueue_.push_back(std::move(func));
         printf("[QF] queueFunction() called from thread %p\n", GetCurrentThread());
     }
-
-
-    std::string getName();
-    //void __inject_name(std::string name);
 
     void shutdown();
     void processFunctions();

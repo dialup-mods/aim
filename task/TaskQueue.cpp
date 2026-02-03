@@ -12,7 +12,7 @@ TaskQueue::~TaskQueue() {
 }
 
 void
-TaskQueue::init() {
+TaskQueue::init() const {
     log_->debug("TaskQueue initializing...");
 }
 

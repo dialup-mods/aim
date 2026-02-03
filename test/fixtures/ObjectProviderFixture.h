@@ -2,7 +2,7 @@
 #include <AsyncGate.h>
 #include <memory>
 
-#include "IRuntime.h"
+#include "RuntimeWrapper.h"
 #include "MockLogger.h"
 #include "ObjectProvider.h"
 
@@ -12,7 +12,7 @@ struct ObjectProviderFixture {
     std::shared_ptr<AsyncGate> asyncGate =
         std::make_shared<AsyncGate>(); // inert is fine
 
-    std::shared_ptr<IRuntime> runtime;
+    std::shared_ptr<RuntimeWrapper> runtime;
 
     ObjectProvider provider;
 

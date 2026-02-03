@@ -1,9 +1,10 @@
 #pragma once
-#ifdef AIM_BUILD
-#define AIM_API __declspec(dllexport)
-#else
-#define AIM_API __declspec(dllimport)
-#endif
+#ifdef false
+// TODO: refactor to use new Runtime module
+// TODO: determine what's still useful
+// TODO: rewrite anything using string comparisons for searching
+// TODO: add tests
+// notes on what
 
 #include <functional>
 #include <string>
@@ -12,163 +13,29 @@
 #include "ILogger.h"
 #include "IModule.h"
 #include "IObjectQuery.h"
-#include "IRuntime.h"
+#include "RuntimeWrapper.h"
 #include "SDK.h"
 
 class PluginState;
 class AsyncGate;
-class IRuntime;
+class RuntimeWrapper;
 
 using r = Runtime;
-
-struct TransparentStringHash {
-    size_t operator()(const wchar_t*) const = delete;
-
-    using is_transparent = void;
-
-    size_t operator()(std::string_view sv) const noexcept {
-        return std::hash<std::string_view>{}(sv);
-    }
-
-    size_t operator()(const std::string& s) const noexcept {
-        return std::hash<std::string_view>{}(s);
-    }
-};
 
 class AIM_API ObjectQuery : public IObjectQuery {
     AIM_INJECTABLE(ObjectProvider)
 
     AIM_INJECT(ILogger, log)
     AIM_INJECT(AsyncGate, asyncGate)
-    AIM_INJECT(IRuntime, runtime)
-
-private:
-    std::unordered_map<std::type_index, void*> instanceCache_;
-    std::unordered_map<UClass*, UObject*> ClassToCDO_;
-    std::unordered_map<std::string, UClass*, TransparentStringHash, std::equal_to<>> classNameToClass_;
+    AIM_INJECT(RuntimeWrapper, runtime)
 
 public:
 
-    ObjectQuery() {
-        buildClassNameCacheFromCDOs();
-        populateClassToCDO();
-    }
+    ObjectQuery() {}
 
-    // UE's `StaticClass`
-    template<typename T>
-    auto classOf() -> UClass* {
-        static UClass* cls = resolveClass(T::className);
-        return cls;
-    }
-
-    auto resolveClass(std::string_view className) -> UClass* override {
-        auto it = classNameToClass_.find(className);
-        if (it != classNameToClass_.end())
-            return it->second;
-
-        // Optional: diagnostics
-        log_->warn("missing: {}", className);
-        return nullptr;
-    }
-
-    auto getFirst(std::string_view className) -> UObject* override {
-        const UClass* wantedClass = r::uclass::find(className);
-
-        const auto& objects = r::uobject::game_pool::ref();
-        for (int i = objects.size(); i-- > 0; ) {
-            UObject* uObject = objects.at(i);
-            if (!uObject) { continue; }
-            if (uObject->ObjectFlags & RF_DefaultOrArchetypeFlags) { continue; }
-            if (r::types::isa(uObject->Class, wantedClass)) {
-                return uObject;
-            }
-        }
-        return nullptr;
-    }
-
-    auto getAll(std::string_view className) -> std::vector<UObject*>  override {
-        const auto* wantedClass = r::uclass::find(className);
-        if (!wantedClass) {
-            printf("Given class name is unknown. Cannot proceed with lookup");
-            return {};
-        }
-
-        std::vector<UObject*> matchingObjs;
-        const auto& objects = r::uobject::game_pool::ref();
-        for (int i = objects.size(); i-- > 0; ) {
-            UObject* uObject = objects.at(i);
-            if (!uObject) { continue; }
-            if (uObject->ObjectFlags & RF_DefaultOrArchetypeFlags) { continue; }
-            if (r::types::isa(uObject->Class, wantedClass)) {
-                matchingObjs.emplace_back(uObject);
-            }
-        }
-        return matchingObjs;
-    }
 
     // fix me, use flags, see getInstanceOf
-    template<typename T>
-    bool isValidLiveInstance(T* obj) {
-        if (!obj) { return false; }
-        auto name = obj->GetFullName();
-        return name.find("Default__") == std::string::npos && name.find("Archetype") == std::string::npos &&
-            name.find("PostGameLobby") == std::string::npos && name.find("Test") == std::string::npos;
-    }
 
-
-private:
-    void buildClassNameCacheFromCDOs() {
-        for (UObject* obj : r::uobject::game_pool::ref()) {
-            if (!obj) continue;
-
-            if (obj->ObjectFlags & RF_ClassDefaultObject) {
-                if (UClass* cls = obj->Class) {
-                    classNameToClass_.emplace(
-                        cls->GetFullName(),
-                        cls
-                    );
-                }
-            }
-        }
-    }
-
-    void populateClassToCDO() {
-        for (UObject* obj : r::uobject::game_pool::ref()) {
-            if (!obj) continue;
-
-            if (obj->ObjectFlags & RF_ClassDefaultObject) {
-                if (obj->Class) {
-                    ClassToCDO_[obj->Class] = obj;
-                }
-            }
-        }
-    }
-
-    UClass* FindClassViaCDO(const std::function<bool(UObject*)> &cdoPredicate) {
-        for (UObject* obj : r::uobject::game_pool::ref()) {
-            if (!obj) continue;
-
-            if (!(obj->ObjectFlags & RF_ClassDefaultObject))
-                continue;
-
-            // This is the class default object
-            UClass* cls = obj->Class;
-            if (!cls) continue;
-
-            if (cdoPredicate(obj)) {
-                return cls;
-            }
-        }
-        return nullptr;
-    }
-
-
-
-
-    // TODO: refactor to use new Runtime module
-    // TODO: determine what's still useful
-    // TODO: rewrite anything using string comparisons for searching
-    // TODO: add tests
     //bool isUStruct(const UObject* obj) {
     //    if (!obj) return false;
 
@@ -615,3 +482,4 @@ private:
     //    USaveData_TA* saveData;
     //    UOnlinePlayer_X* onlinePlayer;
 };
+#endif

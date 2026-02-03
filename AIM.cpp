@@ -1,9 +1,9 @@
 ﻿#include "AIM.h"
 #include "IModule.h"
+#include "RuntimeWrapper.h"
 #include "IRuntime.h"
 
 #include "PluginBase.h"
-//#include "GameWrapperProvider.h"
 #include "AsyncGate.h"
 #include "Dispatch.h"
 #include "ILogger.h"
@@ -13,18 +13,14 @@
 
 #include "ModuleLoader.h"
 #include "TaskQueue.h"
-// #include "ConsoleInterpreter.h"
 #include "EngineLocator.h"
 #include "ObjectQuery.h"
 #include "v1/PluginFence.h"
 
 #include "CallFunction.h"
-//#include "ChatboxConsole.h"
 #include "v1/MutexGuard.h"
 #include "ProcessEvent.h"
 #include "ProcessInternal.h"
-
-#include "v1/IResolver.h"
 
 #include "ICallFunction.h"
 #include "IProcessEvent.h"
@@ -70,13 +66,13 @@ bool AIM::createPopulateRuntime() {
     }
 
     registerModule(
-    ModuleDefinition<IRuntime>()
-        .withDependency(&IRuntime::__inject_log, "[default]")
-        .withDependency(&IRuntime::__inject_engineLocator, "[default]")
+    ModuleDefinition<RuntimeWrapper>()
+        .withDependency(&RuntimeWrapper::__inject_log, "[default]")
+        .withDependency(&RuntimeWrapper::__inject_engineLocator, "[default]")
         .asSingleton()
     );
 
-    auto runtime = resolve<IRuntime>();
+    auto runtime = resolve<RuntimeWrapper>();
     if (!runtime) {
         log->error("Unable to resolve Runtime.");
         return false;
@@ -84,22 +80,6 @@ bool AIM::createPopulateRuntime() {
 
     if (!runtime->init()) {
         log->error("Runtime failed during initialization.");
-        return false;
-    }
-
-    getLogger()->debug("Loading ObjectProvider...");
-
-    registerModule(ModuleDefinition<AsyncGate>().named("ObjectProviderReady").asSingleton());
-
-    registerModule(ModuleDefinition<ObjectQuery, IObjectQuery>()
-            .withDependency(&ObjectQuery::__inject_log, "[default]")
-            .withDependency(&ObjectQuery::__inject_asyncGate, "ObjectProviderReady")
-            .withDependency(&ObjectQuery::__inject_runtime, "ObjectProviderReady")
-            .asSingleton());
-
-    auto objectQuery = resolve<ObjectQuery>("[default]");
-    if (!objectQuery) {
-        getLogger()->error("Could not resolve ObjectProvider");
         return false;
     }
 
@@ -301,9 +281,6 @@ AIM::startup() {
     if (!log) { return; }
     log->debug("AIM startup\n");
 
-    //static_assert(sizeof(FName) == 8, "bad FName");
-    //static_assert(sizeof(FString) == 0x10, "bad FString");
-    //static_assert(sizeof(TArray<void*>) == 0x10, "bad TArray");
     setStaticResolver(getResolver());
     registerModule(
         ModuleDefinition<PluginFence>()
@@ -347,68 +324,9 @@ AIM::startup() {
             getLogger()->debug("AIM gate setReady()");
 
             setPluginReady();
-            testToast();
         });
     });
 
-//    auto processEvent = resolve<ProcessEvent>("[default]");
-//    auto objectQuery = resolve<ObjectProvider>("[default]");
-
-//    std::shared_ptr<IObjectProvider> iface = resolve<ObjectProvider>();
-//    registerInstance<IObjectProvider>(iface);
-}
-
-//template <typename T>
-//auto AIM::classOf(UObject*) -> UClass* {
-//    static UClass* cached = [] {
-//        UClass* cls = r::uclass::find(T::className);
-//        if (!cls) {
-//            printf("can't find\n");
-//        }
-//        return cls;
-//    }();
-//    return cached;
-//};
-//
-//template<typename T>
-//auto AIM::getInstanceOf() -> T* {
-//    static_assert(std::is_base_of_v<UObject, T>);
-//
-//    UClass* wanted = r::uobject::classOf<T>();
-//    if (!wanted) return nullptr;
-//
-//    for (UObject* obj : r::uobject::game_pool::ref()) {
-//        if (!obj) continue;
-//        if (obj->ObjectFlags & RF_DefaultOrArchetypeFlags) continue;
-//
-//        if (obj->Class == wanted) {
-//            return static_cast<T*>(obj);
-//        }
-//    }
-//    return nullptr;
-//}
-
-void AIM::testToast() {
-    auto processEvent = resolve<ProcessEvent>();
-    auto objectQuery = resolve<IObjectQuery>();
-
-    // spawn one, getinstance returns this new one
-    // and it shows a notification in the friends, etc panel
-    //UNotification_TA* notification;
-
-    //processEvent->enableTask(TaskBuilder()
-    //        .name("Toast")
-    //        .functionName("Function Engine.HUD.PostRender")
-    //        .phase(HookPhase::Post)
-    //        .callback([objectQuery](InvocationContext& ctx) {
-    //            auto* mgr = objectQuery->getFirst<UNotificationManager_TA>();
-    //            auto* notificationClass = objectQuery->classOf<UGenericNotification_TA>();
-    //            UNotification_TA* ret = mgr->PopUpOnlyNotification(notificationClass);
-    //            ret->SetTitle(FString(L"Welcome."));
-    //            ret->SetBody(FString(L"You've got mail!"));
-    //        })
-    //        .once()
-    //        .build());
 }
 
 auto AIM::registerPublicInterfaces() const -> std::vector<PublicInterface> {
@@ -416,7 +334,7 @@ auto AIM::registerPublicInterfaces() const -> std::vector<PublicInterface> {
         expose<IProcessEvent>(resolve<ProcessEvent>())
         , expose<ICallFunction>(resolve<CallFunction>())
         , expose<IProcessInternal>(resolve<ProcessInternal>())
-        , expose<IObjectQuery>(resolve<IObjectQuery>())
+        , expose<IRuntime>(resolve<RuntimeWrapper>())
     };
 }
 

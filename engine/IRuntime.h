@@ -1,105 +1,34 @@
 #pragma once
-#include "Runtime.h"
-#include "EngineLocator.h"
-#include "ILogger.h"
 #include "IModule.h"
 #include "SDK.h"
-using r = Runtime;
 
 class IRuntime : public IModule {
     AIM_INJECTABLE(IRuntime)
-    AIM_INJECT(ILogger, log)
-    AIM_INJECT(EngineLocator, engineLocator)
 
-    IRuntime() = default;
-    virtual ~IRuntime() = default;
+    template<typename T>
+    auto classOf() -> UClass* {
+        static UClass* cls = resolveClass(T::className);
+        return cls;
+    }
+    virtual auto resolveClass(std::string_view className) -> UClass* = 0;
 
-    bool init() {
-        log_->info("AIM Runtime initializing...");
+    template<typename T>
+    auto getFirst() -> T* {
+        return static_cast<T*>(getFirst(T::className));
+    }
+    virtual auto getFirst(std::string_view className) -> UObject* = 0;
 
-        const uintptr_t uObjectsAddr = engineLocator_->getUObjectsAddress();
-        const uintptr_t fNameEntriesAddr = engineLocator_->getFNameEntriesAddress();
-
-        if (!uObjectsAddr || !fNameEntriesAddr) {
-            log_->error("Cannot initialize.");
-            return false;
+    template<typename T>
+    auto getAll() -> std::vector<UObject*> {
+        std::vector<T*> out;
+        auto found = getAll(T::className);
+        if (!found.size()) { return out; }
+        for (auto* obj : found) {
+            out.emplace_back(static_cast<T*>(obj));
         }
-
-        Runtime::create();
-        r::fname::game_pool::set(reinterpret_cast<TArray<FNameEntry*>*>(fNameEntriesAddr));
-        r::uobject::game_pool::set(reinterpret_cast<TArray<UObject*>*>(uObjectsAddr));
-
-        if (!(r::uobject::game_pool::isPopulated() && r::uobject::game_pool::hasUObjects())) {
-            log_->error("Failed to start Runtime.");
-            return false;
-        }
-
-        log_->debug("Engine valid: {}", std::to_string(r::uobject::game_pool::hasUObjects() && r::fname::game_pool::isValid()));
-
-        //log_->info("FNameEntry::Flags     = 0x" + int_to_hex(offsetof(FNameEntry, Flags)));
-        //log_->info("FNameEntry::Index     = 0x" + int_to_hex(offsetof(FNameEntry, Index)));
-        //log_->info("FNameEntry::Name      = 0x" + int_to_hex(offsetof(FNameEntry, Name)));
-        //log_->info("FNameEntry sizeof     = 0x" + int_to_hex(sizeof(FNameEntry)));
-
-        return (r::uobject::game_pool::isPopulated() && r::fname::game_pool::isValid());
+        return out;
     }
+    virtual auto getAll(std::string_view className) -> std::vector<UObject*> = 0;
 
-    auto hasUObjects() -> bool { return r::uobject::game_pool::hasUObjects(); }
-    auto hasFNames() -> bool { return r::fname::game_pool::isValid(); }
-
-    auto getUObjectsPtr() -> TArray<UObject*>* {
-        return r::uobject::game_pool::ptr();
-    }
-
-    auto getUObjects() -> TArray<UObject*> {
-        return r::uobject::game_pool::ref();
-    }
-
-    auto findClass(const std::string& classFullName) -> UClass* {
-        return r::uclass::find(classFullName);
-    }
-
-    auto findFunction(const std::string& functionFullName) -> UFunction* {
-        return r::ufunction::find(functionFullName);
-    }
-
-    auto areFNameEntriesValid() -> bool {
-        return r::fname::game_pool::isValid();
-    }
-
-    auto areUObjectsPopulated() -> bool {
-        return r::uobject::game_pool::isPopulated();
-    }
-
-    auto getFNameEntries() -> TArray<FNameEntry*>& {
-        return r::fname::game_pool::ref();
-    }
-
-    auto getFNameEntriesPtr() -> TArray<FNameEntry*>* {
-        return r::fname::game_pool::ptr();
-    }
-
-    auto getFNameEntry(const int32_t index) ->  std::optional<std::reference_wrapper<const FName>> {
-        return r::fname::game_pool::find(index);
-    }
-
-    //auto getFNameEntryName(int32_t index) -> std::string {
-    //    return Runtime::getFNameEntryName(index);
-    //}
-
-    auto findPackages() -> std::vector<UObject*> {
-        return r::packages::findAll();
-    }
-
-    auto getRawObjects() -> const std::vector<UObject*>& {
-        return r::uobject::cache::rawObjects();
-    }
-
-    auto getUObjectsCache() -> std::vector<UObject*>& {
-        return r::uobject::cache::ref();
-    }
-
-    //void shutdown() {
-    //    Runtimme::shutdown();
-    //}
+    virtual auto getUObjects() -> TArray<UObject*> = 0;
 };
