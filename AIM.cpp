@@ -14,7 +14,6 @@
 #include "ModuleLoader.h"
 #include "TaskQueue.h"
 #include "EngineLocator.h"
-#include "ObjectQuery.h"
 #include "v1/PluginFence.h"
 
 #include "CallFunction.h"
@@ -148,7 +147,6 @@ bool AIM::registerFunctionModuleDependencies(const std::string& prefix) {
         ModuleDefinition<Dispatch>()
             .named(prefix + "-Dispatch")
             .withDependency(&Dispatch::__inject_log, "[default]")
-            .withDependency(&Dispatch::__inject_objectQuery, "[default]")
             .withDependency(&Dispatch::__inject_taskQueue, prefix + "-TaskQueue")
             .asSingleton()
     );
@@ -311,7 +309,7 @@ AIM::startup() {
         log->debug("unreal ready, calling detours\n");
         loadDetourModules();
         fence->onReady([this] {
-            printf("detours ready");
+            printf("detours ready\n");
         });
         //
         std::vector<AsyncGate*> processGates;

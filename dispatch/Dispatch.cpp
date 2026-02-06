@@ -5,7 +5,6 @@
 #include "Dispatch.h"
 #include "EventContext.h"
 #include "v1/ILogger.h"
-#include "ObjectQuery.h"
 #include "TaskQueue.h"
 #include "Runtime.h"
 
@@ -110,7 +109,6 @@ bool Dispatch::runTasksForPhase(
     bool shouldBlock = false;
 
     if (auto it = taskMap.find(fnIndex); it != taskMap.end()) {
-        printf("matched at least\n");
         auto& vec = it->second;
         // manual iterator control for thread safety and mutation awareness
         for (auto task = vec.begin(); task != vec.end(); /* manual increment */) {
@@ -124,7 +122,6 @@ bool Dispatch::runTasksForPhase(
                 shouldBlock = true;
             }
             if (currentTask->callback) {
-                printf("calling callback");
                 currentTask->callback(ctx);
             }
             //if (currentTask->callbackBlocking) {
