@@ -10,7 +10,7 @@ INSTALL_DIR    := $(DIALUP_ROOT)/plugin/AIM/bin
 DLL := AIM.dll
 PDB := AIM.pdb
 
-.PHONY: configure build install clean
+.PHONY: configure build install clean all
 
 configure: check-shell
 	$(call run_with_vcvars, cmake -S . -B build -G $(GENERATOR) -DCMAKE_BUILD_TYPE=RelWithDebInfo)
@@ -23,6 +23,8 @@ install: check-shell
 
 clean: check-shell
 	@rm -rf build
+
+all: check-shell clean configure build install
 
 msvc-spawn:
 	@bash -c "if [ -f .build_status ]; do rm .build-status; done;"
