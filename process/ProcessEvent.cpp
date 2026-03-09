@@ -56,11 +56,11 @@ void ProcessEvent::shutdown() {
     removeDetour();
 }
 
-void ProcessEvent::enableTask(std::shared_ptr<TaskDefinition> def) {
+void ProcessEvent::registerTask(std::shared_ptr<TaskDefinition> def) {
     dispatch_->registerTask(std::move(def));
 }
 
-void ProcessEvent::disableTask(std::shared_ptr<TaskDefinition> def) {
+void ProcessEvent::releaseTask(std::shared_ptr<TaskDefinition> def) {
     dispatch_->registerTask(def);
 }
 

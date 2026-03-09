@@ -82,7 +82,7 @@ void GetSpeed() {
 ### The AIM Version
 
 ```c++
-processEvent->enableTask(
+processEvent->registerTask(
     TaskBuilder()
         .name("GoalSpeedAnywhere")
         .functionName("Function TAGame.Ball_TA.Explode")
@@ -140,22 +140,22 @@ auto task = TaskBuilder()
     .callback([] { collect(); })
     .build();
 
-processEvent->enableTask(
+processEvent->registerTask(
     TaskBuilder()
         .name("Enable on match start")
         .functionName("Function TAGame.Game.OnMatchStart")
         .callback([this, task] {
-            processEvent_->enableTask(task);
+            processEvent_->registerTask(task);
         })
         .build()
 );
 
-processEvent->enableTask(
+processEvent->registerTask(
     TaskBuilder()
         .name("Disable on match end")
         .functionName("Function TAGame.Game.OnMatchEnd")
         .callback([this, task] {
-            processEvent_->disableTask(task);
+            processEvent_->releaseTask(task);
         })
         .build()
 );

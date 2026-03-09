@@ -105,8 +105,8 @@ class ProcessEvent : public IProcessEvent {
     }
 
     void shutdown();
-    void enableTask(std::shared_ptr<TaskDefinition> def) override;
-    void disableTask(std::shared_ptr<TaskDefinition> def) override;
+    void registerTask(std::shared_ptr<TaskDefinition> def) override;
+    void releaseTask(std::shared_ptr<TaskDefinition> def) override;
     void clearTasks();
     void* getRLFn();
 

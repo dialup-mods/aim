@@ -65,7 +65,7 @@ bool CallFunction::applyDetour() {
     
     // run inside main event loop
     // to prevent race conditions
-    processEvent_->enableTask(TaskBuilder()
+    processEvent_->registerTask(TaskBuilder()
         .name("Apply CallFunction patch")
         .functionName("Function Engine.Interaction.Tick")
         .phase(HookPhase::Post)
@@ -89,7 +89,7 @@ bool CallFunction::applyDetour() {
 bool CallFunction::removeDetour() {
     // run inside main event loop
     // to prevent race conditions
-    processEvent_->enableTask(TaskBuilder()
+    processEvent_->registerTask(TaskBuilder()
         .name("Apply CallFunction patch [remove]")
         .functionName("Function Engine.Interaction.Tick")
         .phase(HookPhase::Post)
