@@ -37,17 +37,36 @@ auto EngineLocator::findPattern(HMODULE module, const unsigned char* pattern, co
     return NULL;
 }
 
+inline uintptr_t findRipRelativeAddr(uintptr_t startAddr, int offsetToDisplacementInt32) {
+    if (!startAddr)
+        return 0;
+
+    uintptr_t ripRelativeOffsetAddr = startAddr + offsetToDisplacementInt32;
+    int32_t displacement = *reinterpret_cast<int32_t*>(ripRelativeOffsetAddr);
+
+    return ripRelativeOffsetAddr + 4 + displacement;
+}
+
 auto EngineLocator::getFNameEntriesAddress() -> uintptr_t {
-    constexpr unsigned char fNamesPattern[] = "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x01\x00\x35\x25\x02\x00";
-    char fNamesMask[] = "??????xx??xxxxxx";
+    constexpr unsigned char fNamesPattern[] =
+        "\x49\x63\x4E\x08\x48\x8B\x05\x00\x00\x00\x00\x4C\x89\x34\xC8\xEB\x08";
 
-    const uintptr_t fNameEntriesAddress = findPattern(GetModuleHandleW(L"RocketLeague.exe"), fNamesPattern, fNamesMask);
+    char fNamesMask[] = "xxxxxxx????xxxxxx";
 
-    const auto moduleBase = reinterpret_cast<uintptr_t>(GetModuleHandleW(L"RocketLeague.exe"));
-    const auto fNameEntriesOffset = fNameEntriesAddress - moduleBase;
-    log_->info("Rocket League base: {}", int_to_hex(moduleBase));
-    log_->info("GNames address:     {}", int_to_hex(fNameEntriesAddress));
-    log_->info("GNames offset:      {}", int_to_hex(fNameEntriesOffset));
+    const auto module = GetModuleHandleW(L"RocketLeague.exe");
+    const auto moduleBase = reinterpret_cast<uintptr_t>(module);
+
+    const uintptr_t fNameEntriesInstruction =
+        findPattern(module, fNamesPattern, fNamesMask);
+
+    const uintptr_t fNameEntriesAddress =
+        findRipRelativeAddr(fNameEntriesInstruction, 7);
+
+    log_->info("Rocket League base:        {}", int_to_hex(moduleBase));
+    log_->info("GNames instruction:         {}", int_to_hex(fNameEntriesInstruction));
+    log_->info("GNames address:             {}", int_to_hex(fNameEntriesAddress));
+    log_->info("GNames offset:              {}", int_to_hex(fNameEntriesAddress - moduleBase));
+
     return fNameEntriesAddress;
 }
 

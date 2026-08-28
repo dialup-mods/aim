@@ -8,7 +8,6 @@
 #include "EventContext.h"
 #include "ILogger.h"
 #include "MutexGuard.h"
-#include "ObjectQuery.h"
 #include "PatchUtils.h"
 #include "Resolver.h"
 #include "Runtime.h"

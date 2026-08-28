@@ -119,7 +119,9 @@ class CallFunction : public ICallFunction {
     const std::shared_ptr<MutexGuard>& getMutex() const { return mutex_; }
     bool waitForUnlock(DWORD timeoutMs = 500) const;
     static bool fastIsAcquired();
-    
+
+    void *getTrampoline();
+
     bool applyDetour();
     bool removeDetour();
     

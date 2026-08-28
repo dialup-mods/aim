@@ -20,6 +20,12 @@ namespace p = patchutils;
 
 CallFunction* CallFunction::instance_ = nullptr;
 
+struct ReentrancyGuard {
+    bool& flag;
+    ReentrancyGuard(bool& f) : flag(f) { flag = true; }
+    ~ReentrancyGuard() { flag = false; }
+};
+
 void
 CallFunction::init() {
     log_->debug("[CF] init");
@@ -51,13 +57,6 @@ void* CallFunction::getAddress() {
         callFunctionFn_ = patchutils::patternScan(patternBytes_);
     }
     return callFunctionFn_;
-}
-
-void* CallFunction::getBakkesTrampolineFn() {
-    if (bakkesTrampolineFn_ == nullptr) {
-        bakkesTrampolineFn_ = patchutils::patternScan(patternBytes_, true); // resolve jmp
-    }
-    return bakkesTrampolineFn_;
 }
 
 bool CallFunction::applyDetour() {
@@ -117,28 +116,37 @@ bool CallFunction::fastIsAcquired() {
     return false;
 }
 
-void __fastcall CallFunction::handleFunction(UObject* self, FFrame& stack, void* result, UFunction* fn) {
-    if (!fastIsAcquired()) {
-        reinterpret_cast<tCallFunction>(bakkesTrampolineFn_)(self, stack, result, fn);
-        return;
-    }
-    auto log = AIM::getStaticResolver()->resolve<ILogger>();
+void* CallFunction::getTrampoline() {
+//    if (instance_ && instance_->detour_->getTrampoline()) {
+//        return instance_->detour_->getTrampoline();
+//    }
+    return nullptr;
+}
 
-    if (auto dispatch = AIM::getStaticResolver()->resolve<Dispatch>("CF-Dispatch")) {
-        auto ctx = InvocationContext::makeCallFunctionContext(self, stack, nullptr, fn);
-        if (dispatch->dispatchPre(fn->ObjectInternalInteger, ctx)) {
-            // blocking was requested
-            printf("[CF] should block. Returning");
-            return;
-        }
-    
-        reinterpret_cast<tCallFunction>(bakkesTrampolineFn_)(self, stack, result, fn);
-    
-        ctx = InvocationContext::makeCallFunctionContext(self, stack, result, fn);
-        dispatch->dispatchPost(fn->ObjectInternalInteger, ctx);
-        
-        dispatch->dispatchGated(fn->ObjectInternalInteger, ctx);
-    } else {
-        reinterpret_cast<tCallFunction>(bakkesTrampolineFn_)(self, stack, result, fn);
-    }
+void __fastcall CallFunction::handleFunction(UObject* self, FFrame& stack, void* result, UFunction* fn) {
+//    thread_local bool inHandler = false;
+//    if (inHandler || !fastIsAcquired()) {
+//        reinterpret_cast<tCallFunction>(getTrampoline())(self, stack, result, fn);
+//        return;
+//    }
+//
+//    ReentrancyGuard guard(inHandler);
+//
+//    if (auto dispatch = AIM::getStaticResolver()->resolve<Dispatch>("CF-Dispatch")) {
+//        auto ctx = InvocationContext::makeCallFunctionContext(self, stack, nullptr, fn);
+//        if (dispatch->dispatchPre(fn->ObjectInternalInteger, ctx)) {
+//            // blocking was requested
+//            printf("[CF] should block. Returning");
+//            return;
+//        }
+//
+//        reinterpret_cast<tCallFunction>(getTrampoline())(self, stack, result, fn);
+//
+//        ctx = InvocationContext::makeCallFunctionContext(self, stack, result, fn);
+//        dispatch->dispatchPost(fn->ObjectInternalInteger, ctx);
+//
+//        dispatch->dispatchGated(fn->ObjectInternalInteger, ctx);
+//    } else {
+//        reinterpret_cast<tCallFunction>(getTrampoline())(self, stack, result, fn);
+//    }
 }
